@@ -105,8 +105,8 @@
     // exit access spurs, labels, and stairs/escalators
     const exits=[
       ['1',-29,1,-25,1],['2',-23,4,-20,5],['3',-19,3,-18,4],['4',-11,-5,-10,-5],['5',-9,-8,-8,-8],
-      ['6',-5,10.5,-6,10.5],['7',-5,14.5,-6,14.5],['8',-5,22,-6,22],['9',-4,29,-5,30],['10',4,28,5,29],
-      ['11A',4,18,5,19],['11B',5,7,6,7],['14',10,3,11,4],['15',16,3,16,5],['16',23,0,24,-1],
+      ['6',-16.5,10.5,-18,10.5],['7',-5,15,-6,15],['8',-5,22,-6,22],['9',-4,29,-5,30],['10',4,28,5,29],
+      ['11A',14,9.2,16,9.2],['11B',14,11.8,16,11.8],['14',10,3,11,4],['15',16,3,16,5],['16',23,0,24,-1],
       ['17',25,5,26,7],['19A',32,2,33,3],['19B',39,2,40,4],['20A',37,-2,38,-4],['20B',43,-2,44,-4],
       ['21',3,-5,4,-6],['23',-1,-10,-2,-12],['24',-5,-11,-6,-13],['25',-2,-19,-3,-21],['27',-5,-30,-7,-32]
     ];
@@ -271,7 +271,7 @@
     // The corridor wall is broken at the observed exit branches; each opening leads to a real spur.
     // Split the long north passage walls into sections around the exit mouths.
     for(const side of [-1,1]){
-      const openings=side<0?[[9.4,11.6],[13.3,15.5],[20.9,23.1],[27.6,30.0]]:[[5.8,8.2],[11.9,14.2],[16.9,19.2],[26.7,29.2]];
+      const openings=side<0?[[7.3,13.7],[14.0,16.2],[20.9,23.1],[27.6,30.0]]:[[7.3,13.7],[16.9,19.2],[26.7,29.2]];
       const intervals=[];let cursor=3.3;
       for(const [a,b] of openings){if(a>cursor)intervals.push([cursor,a]);cursor=b;}
       if(cursor<30.6)intervals.push([cursor,30.6]);
@@ -280,29 +280,45 @@
     // Long blue advertising wall panels seen along one side of the approach,
     // set only between exit openings so the branch mouths remain clear.
     const blueAd=new THREE.MeshStandardMaterial({color:'#1788b7',emissive:'#075373',emissiveIntensity:.12,roughness:.38});
-    for(const [z,len] of [[7.9,2.7],[12.55,1.3],[17.7,3.8],[25.2,3.2]]){
+    for(const [z,len] of [[5.0,2.7],[18.7,3.8],[25.2,3.2]]){
       box(level1,-3.18,1.33,z,.09,1.42,len,blueAd,false);
       box(level1,-3.115,1.34,z,.035,1.28,len-.16,mat('#36a4ca',.32),false);
       box(level1,-3.085,2.08,z,.04,.06,len-.16,mat('#e8e9df',.28),false);
     }
     // Branch floors widen out from the main passage to both sides, with dark guide strips and thresholds.
-    const branchSpecs=[[-1,10.5,'6'],[-1,14.4,'7'],[-1,22,'8'],[-1,29,'9'],[1,7,'11B'],[1,18,'11A'],[1,28,'10']];
+    const branchSpecs=[[-1,15,'7'],[-1,22,'8'],[-1,29,'9'],[1,28,'10']];
     for(const [side,z,name] of branchSpecs){
       slab(level1,side*5.55,z,4.55,2.55,-.015,.12,publicMat);
       slab(level1,side*5.55,z,3.9,.7,.075,.1,corridorMat);
-      box(level1,side*7.82,.55,z, .18,1.1,2.55,wallMat);
       label(level1,`出口 ${name}`,side*6.4,z-.94,{scale:.57,small:true});
     }
+    // The middle 6–11 section is a true cross passage: Exit 6 is the only
+    // outlet on its west arm; Exit 7 branches separately farther up the spine.
+    slab(level1,-.5,10.5,38,6.2,-.65,1.3,floorMat);
+    slab(level1,-.5,10.5,36,5.6,.015,.08,publicMat);
+    slab(level1,-.5,10.5,34,2.3,.075,.09,corridorMat);
+    for(let j=0;j<11;j++)box(level1,-16.5+j*3.2,3.34,10.5,.075,.1,5.7,darkSlat,false);
+    for(const x of [-13,-9,-5,0,5,9,13])box(level1,x,3.27,10.5,.15,.045,5.35,stripLight,false);
+    // Exit 6 stair/escalator bank sits at the end of the west arm.
+    stairFlight(level1,-16.25,10.5,1.45,3.7,1.55).rotation.y=Math.PI/2;
+    escalator(level1,-13.0,10.5,Math.PI/2);
+    // The east arm widens into a shared Exit 11 forecourt with adjacent 11A/11B.
+    slab(level1,9.0,10.5,20,7.2,-.65,1.3,floorMat);
+    slab(level1,9.0,10.5,19,6.6,.015,.08,publicMat);
+    box(level1,5.4,.15,10.5, .18,.22,6.4,steel,false);
+    label(level1,'11A / 11B 前厅',9.4,10.5,{scale:.67,small:true});
+    // The restroom stays on the right-hand (south) edge when entering the 11 branch.
+    pathLine(level1,[[0,10.5],[7.8,10.5],[12.5,10.5]],.09,.12,'#d5ba58');
     // Reverse-video forward route runs from the exit end toward the ring (-Z).
     // The shop appears first, then the entry gates, both on the traveler's right (+X).
     const shopFrame=mat('#596b70',.48,.25), shopGlass=new THREE.MeshStandardMaterial({color:'#8cc9c8',roughness:.16,metalness:.18,transparent:true,opacity:.56});
-    slab(level1,6.05,24.0,4.7,3.8,-.015,.12,mat('#d8dfd9'));
+    slab(level1,7.1,24.0,6.8,4.4,-.015,.12,mat('#d8dfd9'));
     box(level1,3.72,1.35,24.0,.2,2.7,3.8,shopFrame);
     // Two glazed display bays frame an open central sliding doorway.
     box(level1,3.86,1.35,22.8,.08,2.3,1.15,shopGlass);
     box(level1,3.86,1.35,25.2,.08,2.3,1.15,shopGlass);
     box(level1,3.72,2.82,24.0,.32,.28,3.8,mat('#173f49'));
-    for(const z of [22.15,25.85])box(level1,6.05,1.25,z,4.65,2.5,.16,shopFrame);
+    for(const z of [21.8,26.2])box(level1,7.1,1.25,z,6.65,2.5,.16,shopFrame);
     // Side signs face the passage (-X).
     function sideSign(text,x,y,z,w=3.3){
       const c=document.createElement('canvas');c.width=640;c.height=128;const q=c.getContext('2d');q.fillStyle='#17434a';q.fillRect(0,0,640,128);q.fillStyle='#fff4cc';q.font='700 58px "Noto Sans SC",sans-serif';q.textAlign='center';q.textBaseline='middle';q.fillText(text,320,64);
@@ -337,7 +353,7 @@
     const adColors=['#28a6b7','#ef6685','#f0bd43','#427ec0','#e76b38','#5eb18d'];
     for(let n=0;n<6;n++)for(const side of [-1,1]){
       const z=6.8+n*3.05, wallX=side*3.3;
-      const opening=side<0?[[9.4,11.6],[13.3,15.5],[20.9,23.1],[27.6,30.0]]:[[5.8,8.2],[11.9,14.2],[16.9,19.2],[26.7,29.2]];
+      const opening=side<0?[[7.3,13.7],[14.0,16.2],[20.9,23.1],[27.6,30.0]]:[[7.3,13.7],[16.9,19.2],[26.7,29.2]];
       if(opening.some(([a,b])=>z>=a-1.3&&z<=b+1.3))continue;
       box(level1,wallX,1.1,z,.24,2.2,2.65,wallMat);
       const panelMat=new THREE.MeshStandardMaterial({color:adColors[(n+(side===1?0:2))%adColors.length],emissive:adColors[(n+(side===1?0:2))%adColors.length],emissiveIntensity:.17,roughness:.42});
@@ -347,15 +363,15 @@
     }
     // Direction boards at the branch junctions, with their faces visible from either approach.
     function directionBoard(text,x,z,w=3.5){const g=new THREE.Group();g.position.set(x,2.53,z);level1.add(g);box(g,0,0,0,w,.62,.14,mat('#13232c',.48,.18),false);const c=document.createElement('canvas');c.width=640;c.height=112;const q=c.getContext('2d');q.fillStyle='#10212b';q.fillRect(0,0,640,112);q.fillStyle='#ead04f';q.font='700 48px "Noto Sans SC",sans-serif';q.textAlign='center';q.textBaseline='middle';q.fillText(text,320,56);const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;const geo=new THREE.PlaneGeometry(w-.12,.5),front=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tex}));front.position.z=.077;g.add(front);const backTex=tex.clone();backTex.wrapS=THREE.RepeatWrapping;backTex.repeat.x=-1;backTex.offset.x=1;backTex.needsUpdate=true;const back=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:backTex}));back.position.z=-.077;back.rotation.y=Math.PI;g.add(back);return g;}
-    directionBoard('出口 6 · 7 ←　　　2号线 ↑',0,10.2,4.9);
+    directionBoard('出口 6 ←　　　11A / 11B →',0,10.2,4.9);
+    directionBoard('出口 7 ←',0,15,2.8);
     directionBoard('出口 8 · 9 ←　　　出口 10 →',0,22.1,4.9);
-    directionBoard('出口 11A · 11B →',0,17.1,4.25);
     // A broad stair flight beside the 11A escalator, with visible treads and stainless handrails.
     function stairFlight(parent,x,z,width=1.45,run=3.8,rise=1.55){const g=new THREE.Group();g.position.set(x,.11,z);parent.add(g);const count=13,step=run/count;for(let i=0;i<count;i++){const h=rise*(i+1)/count,t=box(g,0,h/2,-run/2+step*(i+.5),width,h,step*.96,mat(i%2?'#c5cbc7':'#aeb8b4',.5));t.castShadow=true;}const railLen=Math.hypot(run,rise);for(const side of [-1,1]){const rail=box(g,side*(width*.58),rise/2+.62,0,.075,.08,railLen,steel);rail.rotation.x=-Math.atan2(rise,run);const postCount=5;for(let i=0;i<postCount;i++){const f=i/(postCount-1);box(g,side*(width*.58),.18+rise*f+.3,-run/2+run*f,.055,.62,.055,steel);}}box(g,0,.07,run/2+.35,width+1.15,.14,.7,mat('#bfc7c2'));return g;}
-    // Paired stair/escalator bank is set in the 11A spur, leaving the main north-south route open.
-    const stair11a=stairFlight(level1,4.35,18,1.4,3.7,1.65);stair11a.rotation.y=Math.PI/2;
-    escalator(level1,6.8,18,Math.PI/2);
-    box(level1,6.35,.25,18,.48,.18,3.15,mat('#cbd0cc'));
+    // Paired stair/escalator bank sits at the shared 11A/11B forecourt, leaving the main route open.
+    const stair11a=stairFlight(level1,13.6,9.2,1.4,3.7,1.65);stair11a.rotation.y=Math.PI/2;
+    escalator(level1,13.6,11.8,Math.PI/2);
+    box(level1,13.1,.25,10.5,.48,.18,5.8,mat('#cbd0cc'));
     label(level1,'站厅 / 换乘',0,0,{scale:1.12}); label(level1,'公共通道',-15,1,{scale:.85}); label(level1,'公共通道',17,1,{scale:.85}); label(level1,'向南换乘',-2,26,{scale:.8});
 
     // Apply the requested B1 hall enlargement as one consistent horizontal scale,
@@ -398,15 +414,15 @@
       const southMain=Math.abs(u)<=3.25&&v>=-20.5&&v<=.5;
       const southBend=u>=-7.8&&u<=1.0&&v>=-29&&v<=-15.5;
       const southEnd=u>=-8.0&&u<=.0&&v>=-35.5&&v<=-26;
-      const west6=v>=9.4&&v<=11.7&&u>=-6.7&&u<=-1.9;
-      const west7=v>=13.2&&v<=15.6&&u>=-6.7&&u<=-1.9;
+      const west6=v>=7.35&&v<=13.65&&u>=-18.5&&u<=-1.9;
+      const west7=v>=13.6&&v<=16.4&&u>=-6.7&&u<=-1.9;
       const west8=v>=20.7&&v<=23.3&&u>=-6.7&&u<=-1.9;
       const west9=v>=27.3&&v<=30.4&&u>=-5.0&&u<=-1.9;
       const restroom=v>=11.7&&v<=14.4&&u>=4.4&&u<=9.0;
-      const east11b=v>=5.7&&v<=8.3&&u>=1.9&&u<=8.9;
-      const east11a=v>=16.8&&v<=19.3&&u>=1.9&&u<=8.1;
+      const east11b=v>=8.45&&v<=12.55&&u>=1.9&&u<=16.7;
+      const east11a=v>=8.45&&v<=11.3&&u>=1.9&&u<=16.7;
       const east10=v>=26.4&&v<=29.4&&u>=1.9&&u<=8.3;
-      const shopFront=v>=20.2&&v<=26.0&&u>=1.9&&u<=8.5;
+      const shopFront=v>=20.2&&v<=26.0&&u>=1.9&&u<=11.0;
       if(!(hub||outerLane||spine||westMain||eastMain||southMain||southBend||southEnd||west6||west7||west8||west9||restroom||east11b||east11a||east10||shopFront))return false;
       for(const [px,pz] of pierSpecs)if(Math.hypot(x-px*hallScale,z-pz*hallScale)<.88)return false;
       for(const [px,pz] of outerPierSpecs)if(Math.hypot(x-px*hallScale,z-pz*hallScale)<1.03)return false;
