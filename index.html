@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>车站空间 · Three.js</title>
+  <style>
+    :root { color-scheme:dark; --ink:#eaf1f7; --muted:#8da0b0; --line:rgba(187,211,229,.13); --panel:rgba(12,22,31,.82); --cyan:#63d4df; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#0a1219; color:var(--ink); font-family:'Noto Sans SC',sans-serif; }
+    #stage { position:fixed; inset:0; }
+    canvas { display:block; width:100%; height:100%; }
+    .grain { position:fixed; inset:0; pointer-events:none; opacity:.13; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"); mix-blend-mode:soft-light; }
+    .top { position:fixed; top:30px; left:36px; z-index:2; pointer-events:none; }
+    .eyebrow { font:500 10px 'DM Mono',monospace; letter-spacing:.22em; color:#7a9aae; text-transform:uppercase; display:flex; align-items:center; gap:10px; }
+    .eyebrow:before { content:''; width:23px; height:1px; background:var(--cyan); }
+    h1 { font-size:29px; letter-spacing:.07em; font-weight:500; margin:12px 0 5px; }
+    .sub { color:#96aab8; font-size:12px; letter-spacing:.05em; }
+    .panel { position:fixed; z-index:2; background:var(--panel); border:1px solid var(--line); backdrop-filter:blur(16px); box-shadow:0 14px 50px #0004; }
+    .levels { top:32px; right:34px; padding:7px; display:flex; gap:5px; border-radius:10px; }
+    button { font:inherit; color:inherit; cursor:pointer; }
+    .level { border:0; border-radius:6px; padding:10px 15px; background:transparent; color:#91a4b2; font-size:12px; letter-spacing:.04em; transition:.2s; }
+    .level.active { color:#061519; background:#69d2da; box-shadow:0 3px 18px #5bd9df35; }
+    .walk-help { position:fixed; z-index:3; top:91px; right:34px; border-radius:8px; padding:11px 14px; color:#bbced6; font-size:11px; line-height:1.7; }
+    #walk-help[hidden] { display:none; }
+    .legend { right:34px; bottom:32px; width:218px; border-radius:10px; padding:17px 18px; }
+    .legend-title { font:500 10px 'DM Mono',monospace; letter-spacing:.17em; color:#8195a3; margin-bottom:13px; }
+    .key { display:flex; align-items:center; gap:10px; font-size:11px; color:#bfd0da; margin:9px 0; }
+    .swatch { width:15px; height:9px; border-radius:2px; }
+    .note { position:fixed; left:36px; bottom:30px; z-index:2; color:#8799a6; font-size:11px; letter-spacing:.03em; display:flex; gap:17px; }
+    .note span { display:flex; align-items:center; gap:7px; }
+    .dot { width:4px; height:4px; border-radius:50%; background:#61d2dc; }
+    .compass { position:fixed; top:100px; right:44px; z-index:2; width:45px; text-align:center; color:#7f98a8; font:11px 'DM Mono',monospace; pointer-events:none; }
+    .compass i { margin:7px auto 0; width:1px; height:33px; display:block; background:linear-gradient(#69d2da,#69d2da00); position:relative; }
+    .compass i:before { content:''; position:absolute; left:-4px; top:-1px; border-left:4px solid transparent; border-right:4px solid transparent; border-bottom:7px solid #69d2da; }
+    .tooltip { position:fixed; z-index:4; pointer-events:none; padding:8px 11px; background:#08131beF; border:1px solid #52728380; border-radius:6px; font-size:11px; color:#d9e9ee; opacity:0; transform:translate(10px,10px); transition:opacity .12s; white-space:nowrap; }
+    .tooltip strong { color:#67d2db; font-family:'DM Mono',monospace; font-weight:500; }
+    @media(max-width:700px) { .top{top:20px;left:20px} h1{font-size:22px} .sub{font-size:10px} .levels{top:auto;bottom:82px;right:16px;flex-wrap:wrap;max-width:calc(100vw - 32px);justify-content:flex-end} .level{padding:9px 10px;font-size:10px} .walk-help{top:auto;bottom:148px;right:16px} .legend{right:16px;bottom:16px;width:185px;padding:12px} .note{left:20px;bottom:23px;font-size:9px;gap:9px} .compass{right:18px;top:22px} }
+  </style>
+</head>
+<body>
+  <div id="stage"></div><div class="grain"></div>
+  <header class="top"><div class="eyebrow">SANYANG · STATION STUDY / 01</div><h1>车站空间结构</h1><div class="sub">地下一层站厅 · 公共区通道</div></header>
+  <div class="panel levels"><button class="level active" data-level="b1">B1　站厅层</button><button class="level" data-level="b2">B2　站台层</button><button class="level" data-level="all">空间叠合</button><button class="level" data-level="walk">第一视角</button></div>
+  <div class="panel walk-help" id="walk-help" hidden>W A S D 移动 · 鼠标转向<br>方向键也可移动/转向 · Esc 解锁鼠标<br>再点画面可继续，点「第一视角」返回模型视角</div>
+  <div class="compass">N<i></i></div>
+  <aside class="panel legend"><div class="legend-title">MAP KEY / 图例</div><div class="key"><i class="swatch" style="background:#173b59"></i>公共通道</div><div class="key"><i class="swatch" style="background:#b8d8d8"></i>站厅空间</div><div class="key"><i class="swatch" style="background:#c6cac6"></i>外圈步行带 / 店面</div><div class="key"><i class="swatch" style="background:#eccb52"></i>出入口 / 垂直交通</div><div class="key"><i class="swatch" style="background:#89939d"></i>站台层</div></aside>
+  <div class="note"><span><i class="dot"></i>根据层级图与外圈环拍照片简化重构</span><span>拖动旋转 · 滚轮缩放 · 点击出口查看编号</span></div>
+  <div class="tooltip" id="tip"></div>
+  <script src="./assets/three.min.js"></script>
+  <script src="./assets/OrbitControls.js"></script>
+  <script>
+
+    const scene = new THREE.Scene(); scene.background = new THREE.Color('#0a1219'); scene.fog = new THREE.Fog('#0a1219', 1050, 1850);
+    const cameraViewHeight=390, aspect=innerWidth/innerHeight;
+    const mapCamera=new THREE.OrthographicCamera(-cameraViewHeight*aspect/2,cameraViewHeight*aspect/2,cameraViewHeight/2,-cameraViewHeight/2,.1,2200);
+    mapCamera.position.set(0,260,330);
+    const walkCamera=new THREE.PerspectiveCamera(70,aspect,.1,260);
+    let camera=mapCamera;
+    const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.18; document.querySelector('#stage').appendChild(renderer.domElement);
+    let controls = new THREE.OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.dampingFactor=.06; controls.target.set(0,0,0); controls.minDistance=24; controls.maxDistance=2400; controls.minZoom=.2; controls.maxZoom=6; controls.maxPolarAngle=Math.PI*.47;
+    function switchCamera(next,target){controls.dispose();camera=next;controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.minDistance=8;controls.maxDistance=2400;controls.minZoom=.2;controls.maxZoom=6;controls.maxPolarAngle=Math.PI*.47;if(target)controls.target.copy(target);}
+    scene.add(new THREE.HemisphereLight('#dbeaf0','#18232d',2.0));
+    const keyLight=new THREE.DirectionalLight('#fff2cf',3.2); keyLight.position.set(-18,35,16); keyLight.castShadow=true; keyLight.shadow.mapSize.set(2048,2048); keyLight.shadow.camera.left=-38; keyLight.shadow.camera.right=38; keyLight.shadow.camera.top=38; keyLight.shadow.camera.bottom=-38; keyLight.shadow.bias=-.0004; scene.add(keyLight);
+    const fill=new THREE.DirectionalLight('#7dbdcc',1.3); fill.position.set(25,18,-25); scene.add(fill);
+    const mat=(color,roughness=.8,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+    const floorMat=mat('#cfd3d0',.48), publicMat=mat('#b8bfbb',.4), corridorMat=mat('#a1a8a5',.48), edgeMat=mat('#31556a'), yellowMat=mat('#edc949',.6), wallMat=mat('#e1e3de',.5), pillarMat=mat('#7c9498'), platformMat=mat('#929ba0'), trackMat=mat('#333e47'), stairMat=mat('#ddbd4b'), glassMat=new THREE.MeshStandardMaterial({color:'#78b9c0',roughness:.2,metalness:.25,transparent:true,opacity:.46});
+    const root=new THREE.Group(); scene.add(root); const level1=new THREE.Group(), level2=new THREE.Group(); root.add(level1,level2);
+    function box(parent,x,y,z,w,h,d,material,shadow=true){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=shadow;o.receiveShadow=true;parent.add(o);return o;}
+    function slab(parent,x,z,w,d,y=-.35,h=.7,material=floorMat){const m=box(parent,x,y,z,w,h,d,material);if(parent===level1)m.userData.planSurface=true;return m;}
+    function roundedHall(parent,x,z,rx,rz,y=-.04,material=publicMat){const g=new THREE.CircleGeometry(1,64);g.scale(rx,rz,1);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,material);m.position.set(x,y,z);m.receiveShadow=true;if(parent===level1)m.userData.planSurface=true;parent.add(m);return m;}
+    function pathLine(parent,pts,r=.065,y=.045,color='#d9e7df'){const curve=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],y,p[1])));const m=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.max(16,pts.length*8),r,8,false),mat(color,.7));if(parent===level1)m.userData.planSurface=true;parent.add(m);return m;}
+    const fontCanvas=document.createElement('canvas'), ctx=fontCanvas.getContext('2d');
+    function label(parent,text,x,z,{color='#0d2230',bg='#f5f3e8',scale=1,small=false}={}){const c=document.createElement('canvas');c.width=small?256:384;c.height=128;const g=c.getContext('2d');g.fillStyle=bg;g.beginPath();g.roundRect(7,8,c.width-14,c.height-16,13);g.fill();g.fillStyle=color;g.textAlign='center';g.textBaseline='middle';g.font=`600 ${small?49:58}px "Noto Sans SC", sans-serif`;g.fillText(text,c.width/2,c.height/2+1);const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));spr.position.set(x,1.45,z);spr.scale.set((small?2.5:3.15)*scale,(small?.75:.95)*scale,1);spr.userData.label=text;parent.add(spr);return spr;}
+    function extrudedShape(parent,coords,depth,material,y=0){const s=new THREE.Shape();s.moveTo(coords[0][0],coords[0][1]);for(let i=1;i<coords.length;i++)s.lineTo(coords[i][0],coords[i][1]);s.closePath();const geo=new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:false,steps:1});geo.rotateX(-Math.PI/2);geo.translate(0,y,0);const o=new THREE.Mesh(geo,material);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
+    // B1 continuous public concourse, in a simplified trace of the photographed plan.
+    // Main north-south spine, central transfer hall, east-west concourse and southern branch.
+    slab(level1,0,-12,7,29,-.65,1.3,floorMat); slab(level1,0,12,7,20,-.65,1.3,floorMat);
+    slab(level1,-3.5,0,3.8,9,-.65,1.3,floorMat); slab(level1,3.5,0,3.8,9,-.65,1.3,floorMat);
+    slab(level1,-17,1,31,5.6,-.65,1.3,floorMat); slab(level1,17,1,31,5.6,-.65,1.3,floorMat);
+    // Continue the long east exit gallery and the bent south exit arm shown on B1.
+    slab(level1,36,1,19,5.6,-.65,1.3,floorMat);
+    slab(level1,-2,-19,8,16,-.65,1.3,floorMat); slab(level1,-4,-29,7,13,-.65,1.3,floorMat);
+    slab(level1,-7,-6,10,11,-.65,1.3,floorMat); slab(level1,8,7,15,8,-.65,1.3,floorMat);
+    slab(level1,-7,10,8,8,-.65,1.3,floorMat); slab(level1,8,-10,9,8,-.65,1.3,floorMat);
+    slab(level1,-1,23,5,12,-.65,1.3,floorMat); slab(level1,-4,30,10,6,-.65,1.3,floorMat);
+    // Light public concourse ribbons sit inside the darker circulation spine.
+    slab(level1,0,-11,5.1,28,.015,.08,publicMat); slab(level1,0,11,5.1,18,.015,.08,publicMat);
+    slab(level1,-16,1,29,3.8,.015,.08,publicMat); slab(level1,16,1,29,3.8,.015,.08,publicMat);
+    slab(level1,36,1,19,3.8,.015,.08,publicMat);
+    slab(level1,-2,-19,6,15,.015,.08,publicMat); slab(level1,-4,-29,5,12,.015,.08,publicMat);
+    slab(level1,-7,-6,8.5,9,.015,.08,publicMat); slab(level1,8,7,13,5.7,.015,.08,publicMat);
+    slab(level1,-1,22,3.5,12,.015,.08,publicMat); slab(level1,-4,29,8,4,.015,.08,publicMat);
+    // Navy guideway strips from the source drawing.
+    slab(level1,0,-14,2.6,23,.075,.09,corridorMat); slab(level1,0,12,2.5,16,.075,.09,corridorMat);
+    slab(level1,-17,1,27,2.2,.075,.09,corridorMat); slab(level1,17,1,27,2.2,.075,.09,corridorMat);
+    slab(level1,36,1,17,2.2,.075,.09,corridorMat);
+    slab(level1,-2,-19,4,14,.075,.09,corridorMat); slab(level1,-4,-29,3,11,.075,.09,corridorMat);
+    slab(level1,-7,-6,7,5,.075,.09,corridorMat); slab(level1,8,7,11,3.4,.075,.09,corridorMat);
+    slab(level1,-1,22,2.2,11,.075,.09,corridorMat); slab(level1,-4,29,5.8,3,.075,.09,corridorMat);
+    roundedHall(level1,0,0,7.1,5.5,.07,publicMat);
+    // central circular transfer rotunda and ring detailing
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(4.6,.11,8,96),mat('#647b81',.6));ring.rotation.x=Math.PI/2;ring.position.y=.18;ring.userData.planTorus=true;level1.add(ring);
+    roundedHall(level1,0,0,3.25,2.5,.16,mat('#d5d8d0'));
+    // exit access spurs, labels, and stairs/escalators
+    const exits=[
+      ['1',-29,1,-25,1],['2',-23,4,-20,5],['3',-19,3,-18,4],['4',-11,-5,-10,-5],['5',-9,-8,-8,-8],
+      ['6',-5,10.5,-6,10.5],['7',-5,14.5,-6,14.5],['8',-5,22,-6,22],['9',-4,29,-5,30],['10',4,28,5,29],
+      ['11A',4,18,5,19],['11B',5,7,6,7],['14',10,3,11,4],['15',16,3,16,5],['16',23,0,24,-1],
+      ['17',25,5,26,7],['19A',32,2,33,3],['19B',39,2,40,4],['20A',37,-2,38,-4],['20B',43,-2,44,-4],
+      ['21',3,-5,4,-6],['23',-1,-10,-2,-12],['24',-5,-11,-6,-13],['25',-2,-19,-3,-21],['27',-5,-30,-7,-32]
+    ];
+    const exitObjects=[];
+    exits.forEach(([name,x,z,sx,sz],i)=>{
+      // connector to the exit marker, emphasized as a narrow threshold.
+      const dx=sx-x,dz=sz-z; const len=Math.hypot(dx,dz); const angle=Math.atan2(dz,dx);
+      const c=box(level1,x+dx/2,.18,z+dz/2,len,.16,.75,publicMat); c.rotation.y=-angle;c.userData.planSurface=true;
+      const stair= new THREE.Group(); stair.position.set(sx,.16,sz); stair.rotation.y=-angle; level1.add(stair);
+      box(stair,0,.12,0,2.15,.25,2.8,stairMat);
+      for(let j=0;j<7;j++)box(stair,-.72+j*.24,.27+j*.045,.1,.13,.08,2.05,mat(j%2?'#ffe778':'#d8b83c'));
+      box(stair,0,.8,-1.34,2.3,.12,.13,mat('#fff1a9'));
+      const lbl=label(level1,`出口 ${name}`,sx,sz-1.9,{scale:.77,small:true});
+      const group=new THREE.Group();group.position.set(sx,.35,sz);group.userData={exit:name,title:`出口 ${name}`};
+      const hit=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,.45,24),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));hit.position.y=.25;group.add(hit);level1.add(group);exitObjects.push(group);
+    });
+    // Passage boundary edges, subtle service rooms and structural columns.
+    const walls=[[-30,-1,20,.18],[30,-1,19,.18]];
+    walls.forEach(([x,z,w,d])=>box(level1,x,.43,z,w,.86,d,wallMat));
+    // Undo edges along openings: short segments leave clear routes through the spine.
+    const cols=[[-2.4,-4],[2.4,-4],[-2.4,4],[2.4,4],[-2.35,-15],[2.35,-15],[-2.35,17],[2.35,17],[-11,2],[-20,2],[11,2],[20,2],[30,2],[38,2]];
+    cols.forEach(([x,z])=>{const p=box(level1,x,.75,z,.42,1.45,.42,pillarMat);p.material=mat('#8da2a3',.45,.2);});
+    // Small planted/service islands and wayfinding beacons.
+    [[-12,-7],[11,9],[-9,16],[18,-3]].forEach(([x,z])=>{box(level1,x,.22,z,2.5,.35,1.25,mat('#d4d8cd'));box(level1,x,.45,z,.12,.08,.8,yellowMat);});
+    // Escalator banks near transfer and vertical branch.
+    function escalator(parent,x,z,rot=0){const g=new THREE.Group();g.position.set(x,.24,z);g.rotation.y=rot;parent.add(g);box(g,0,.05,0,1.35,.18,4.5,mat('#727e83'));for(let i=0;i<13;i++){const st=box(g,0,.17+i*.018,-1.8+i*.3,1.08,.12,.23,stairMat);st.rotation.x=-.11;}[-.68,.68].forEach(s=>box(g,s,.54,0,.07,.78,4.6,mat('#b7c8c5',.3,.3)));return g;}
+    escalator(level1,-3.9,5,.12);escalator(level1,4.05,6,-.12);escalator(level1,-.2,-3,Math.PI/2);escalator(level1,-2.2,21,0);
+    // Upper geometry on B1 to make the miniature read as an architectural model.
+    const borderMat=mat('#92a5a4');
+    // Stations/shops on the perimeter are kept low so the circulation remains legible.
+    [[-24,1,4,1.8],[29,1,4,1.7],[-9,11,2.5,2],[11,-8,3.2,2]].forEach(([x,z,w,d])=>{box(level1,x,.38,z,w,.65,d,borderMat);box(level1,x,.74,z,w*.78,.08,d*.78,mat('#d5dcd5'));});
+    // Exit markers as small floating numbered beacons for clear pickup.
+    function beacon(parent,text,x,z){const g=new THREE.Group();g.position.set(x,1.08,z);parent.add(g);const stem=box(g,0,.48,0,.09,.95,.09,mat('#d8bf58'));const p=box(g,0,1.05,0,1.65,.52,.18,mat('#101b24'));const canv=document.createElement('canvas');canv.width=256;canv.height=96;const cc=canv.getContext('2d');cc.fillStyle='#f2d34f';cc.font='700 48px "Noto Sans SC",sans-serif';cc.textAlign='center';cc.textBaseline='middle';cc.fillText(text,128,48);const tx=new THREE.CanvasTexture(canv);tx.encoding=THREE.sRGBEncoding;const face=new THREE.Mesh(new THREE.PlaneGeometry(1.52,.42),new THREE.MeshBasicMaterial({map:tx,transparent:true}));face.position.set(0,1.05,.101);g.add(face);}
+    exits.forEach(([n,x,z])=>beacon(level1,n,x,z));
+    // Details derived from the two walk-through videos: the open circular hall,
+    // glossy tiled finish, column rings, the slatted 6–11 corridor ceiling and its screens.
+    const steel=mat('#b8c2c0',.24,.64), columnWhite=mat('#eef1ed',.2,.08), granite=mat('#aab2ae',.34,.08), darkSlat=mat('#29363b',.68,.18);
+    function horizontalTorus(parent,rx,rz,tube,y,material){const o=new THREE.Mesh(new THREE.TorusGeometry(1,tube,10,96),material);o.scale.set(rx,rz,1);o.rotation.x=Math.PI/2;o.position.set(0,y,0);o.userData.planTorus=true;parent.add(o);return o;}
+    // Concentric floor inlays and subtle radial joints make the transfer rotunda read as a ring.
+    horizontalTorus(level1,3.55,2.72,.028,.115,mat('#899797',.42));
+    horizontalTorus(level1,4.38,3.35,.045,.118,mat('#d0b96c',.36,.22));
+    horizontalTorus(level1,6.18,4.63,.035,.115,mat('#829092',.45));
+    for(let i=0;i<16;i++){const a=i*Math.PI/8, mid=4.95, len=1.72;const seam=box(level1,Math.cos(a)*mid,.112,Math.sin(a)*mid,.018,.012,len,mat('#86918f',.5));seam.rotation.y=a;}
+    // Tall glazed-white round piers with stainless plinths and illuminated crown rings.
+    const pierSpecs=[];
+    for(let i=0;i<16;i++){const a=(i+.5)*Math.PI/8,x=Math.cos(a)*5.55,z=Math.sin(a)*4.08;pierSpecs.push([x,z,i]);
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.56,.61,3.9,40),columnWhite);shaft.position.set(x,2.08,z);shaft.castShadow=true;shaft.receiveShadow=true;level1.add(shaft);
+      const foot=new THREE.Mesh(new THREE.CylinderGeometry(.69,.69,.16,48),steel);foot.position.set(x,.15,z);foot.castShadow=true;level1.add(foot);
+      const collar=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.09,48),mat('#e0e4df',.25,.35));collar.position.set(x,3.72,z);level1.add(collar);
+      const halo=new THREE.Mesh(new THREE.TorusGeometry(.68,.075,10,48),new THREE.MeshStandardMaterial({color:'#fff0c7',emissive:'#e9ce86',emissiveIntensity:.55,roughness:.22}));halo.rotation.x=Math.PI/2;halo.position.set(x,3.81,z);level1.add(halo);
+      const baseRing=new THREE.Mesh(new THREE.TorusGeometry(.65,.035,8,48),steel);baseRing.rotation.x=Math.PI/2;baseRing.position.set(x,.25,z);level1.add(baseRing);
+      if(i===1||i===5){const wrap=new THREE.Mesh(new THREE.CylinderGeometry(.575,.575,1.35,48,1,true),new THREE.MeshStandardMaterial({color:i===1?'#197b65':'#357aa2',roughness:.45,metalness:.12,side:THREE.DoubleSide}));wrap.position.set(x,2.35,z);level1.add(wrap);for(let k=-1;k<=1;k++){const stripe=box(level1,x,2.35+k*.3,z,.045,.045,.95,mat('#e5d9a5',.3));stripe.rotation.y=a;}}
+    }
+    // A broken overhead halo suggests the circular soffit visible around the columns while keeping the model open.
+    horizontalTorus(level1,6.75,5.05,.12,4.02,mat('#dfe4dd',.28,.26));
+    // The photographs circle the *outside* of this hall.  Add its wide walking band
+    // separately from the inner rotunda so the shop and exit frontage has room.
+    const outerRing=new THREE.Group();outerRing.name='站厅外圈（照片还原）';level1.add(outerRing);
+    const outerFloorGeo=new THREE.RingGeometry(5.95,10.35,112);outerFloorGeo.scale(1,.77,1);outerFloorGeo.rotateX(-Math.PI/2);
+    const outerFloor=new THREE.Mesh(outerFloorGeo,mat('#c6cac6',.24,.08));outerFloor.position.y=.086;outerFloor.receiveShadow=true;outerFloor.userData.planSurface=true;outerRing.add(outerFloor);
+    for(const r of [6.02,9.97])horizontalTorus(outerRing,r,r*.77,.023,.105,mat('#899491',.4));
+    // Broad pale stone tiles, intermittent ceiling grilles and the long white light strips.
+    const tileJoint=mat('#8d9691',.66), ringLight=new THREE.MeshStandardMaterial({color:'#fffdf2',emissive:'#fff4cf',emissiveIntensity:1.1,roughness:.25});
+    for(let i=0;i<160;i++){const a=i*Math.PI/80,x=Math.cos(a)*7.8,z=Math.sin(a)*6.0;
+      const joint=box(outerRing,x,.101,z,.022,.009,2.9,tileJoint,false);joint.rotation.y=-a;
+    }
+    for(const [start,end] of [[18,70],[110,160],[200,250],[290,340]])for(let deg=start;deg<=end;deg+=1.5){const a=deg*Math.PI/180,x=8.5*Math.cos(a),z=6.55*Math.sin(a);
+      const fin=box(outerRing,x,3.89,z,.085,.1,2.55,darkSlat,false);fin.rotation.y=-a;
+      if((deg-start)%4.5===0){const light=box(outerRing,x,3.82,z,.075,.045,2.25,ringLight,false);light.rotation.y=-a;}
+    }
+    for(const [cx,cz] of [[-8.4,1.1],[8.4,-1.1]]){
+      for(let k=-3;k<=3;k++){box(outerRing,cx+k*.47,3.76,cz,.025,.035,3.1,steel,false);box(outerRing,cx,3.76,cz+k*.47,3.1,.035,.025,steel,false);}
+    }
+    // Eight large glazed-white outer piers: two photographed as green/blue ad columns.
+    const outerPierSpecs=[];
+    function wrapAdColumn(x,z,kind){const c=document.createElement('canvas');c.width=512;c.height=256;const g=c.getContext('2d');
+      g.fillStyle=kind==='green'?'#075a34':'#164b91';g.fillRect(0,0,512,256);
+      g.fillStyle=kind==='green'?'#f1f7e9':'#e8f5ff';g.font='bold 60px Arial';g.textAlign='center';g.fillText(kind==='green'?'Heineken':'江苏银行',256,111);
+      g.font='bold 33px "Noto Sans SC",sans-serif';g.fillText(kind==='green'?'★ 1873 ★':'梦想苏超  锡望登场',256,174);
+      const tx=new THREE.CanvasTexture(c);tx.encoding=THREE.sRGBEncoding;
+      const wrap=new THREE.Mesh(new THREE.CylinderGeometry(.752,.752,2.5,48,1,true),new THREE.MeshBasicMaterial({map:tx,side:THREE.DoubleSide}));wrap.position.set(x,2.03,z);outerRing.add(wrap);
+    }
+    for(let i=0;i<32;i++){const a=(i+.5)*Math.PI/16,x=8.15*Math.cos(a),z=6.2*Math.sin(a);outerPierSpecs.push([x,z]);
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.73,.76,3.75,48),columnWhite);shaft.position.set(x,2.02,z);shaft.castShadow=true;shaft.receiveShadow=true;outerRing.add(shaft);
+      const foot=new THREE.Mesh(new THREE.CylinderGeometry(.83,.83,.17,48),steel);foot.position.set(x,.19,z);outerRing.add(foot);
+      const halo=new THREE.Mesh(new THREE.TorusGeometry(.87,.07,10,48),ringLight);halo.rotation.x=Math.PI/2;halo.position.set(x,3.94,z);outerRing.add(halo);
+      if(i===1)wrapAdColumn(x,z,'blue');if(i===13)wrapAdColumn(x,z,'green');
+    }
+    // Canvas signs stay legible in the miniature and the first-person view.
+    function ringSign(parent,text,w,h,bg,fg,y=2.88){const c=document.createElement('canvas');c.width=768;c.height=160;const g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,768,160);
+      g.fillStyle=fg;g.textAlign='center';g.textBaseline='middle';g.font='bold 72px "Noto Sans SC",Arial,sans-serif';g.fillText(text,384,82,724);
+      const tx=new THREE.CanvasTexture(c);tx.encoding=THREE.sRGBEncoding;const p=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tx,side:THREE.DoubleSide}));p.position.set(0,y,.16);parent.add(p);return p;
+    }
+    function ringFacade(deg,name,w,bg,fg,glassColor='#85acb4'){const a=deg*Math.PI/180,g=new THREE.Group();g.position.set(10.7*Math.cos(a),0,8.18*Math.sin(a));g.rotation.y=-Math.PI/2-a;outerRing.add(g);
+      box(g,0,1.57,-.13,w,3.1,.27,mat('#e5e7e1',.42));box(g,0,1.26,.04,w-.25,2.18,.07,mat(glassColor,.18,.28));
+      for(const px of [-w*.24,w*.24])box(g,px,1.25,.105,.045,2.18,.05,steel,false);
+      ringSign(g,name,w-.12,.48,bg,fg,2.78);return g;
+    }
+    // In photo order these shop windows surround the Exit 4 department store,
+    // the commercial-street side, and the 7-Eleven / coffee side of the ring.
+    ringFacade(235,'大东方百货',3.9,'#383737','#fff1c3','#a89a87');
+    ringFacade(190,'LANCÔME',3.35,'#202d3b','#ffffff','#a9cbe0');
+    ringFacade(170,'茶颜悦色',2.95,'#6b3a35','#fff1da','#b9967b');
+    ringFacade(151,'麦当劳',2.55,'#bd211d','#ffec65','#f7a12b');
+    ringFacade(130,'ESTÉE LAUDER',3.35,'#263b55','#f4dfc2','#b1a58f');
+    ringFacade(28,'地铁城  METRO CITY',3.8,'#eeeae8','#bf3437');
+    ringFacade(326,'瑞幸咖啡  luckin coffee',3.7,'#14243c','#ffffff');
+    const seven=ringFacade(299,'7-ELEVEN',2.9,'#f4f5ed','#188357');
+    for(const [yy,col] of [[2.56,'#ed733e'],[2.5,'#28a66b'],[2.44,'#e14549']])box(seven,0,yy,.175,2.82,.035,.015,mat(col),false);
+    // Two bright wall-size advertisements and the white/red metro exhibition panel.
+    function ringBillboard(deg,title,w,color){const a=deg*Math.PI/180,g=new THREE.Group();g.position.set(10.62*Math.cos(a),0,8.12*Math.sin(a));g.rotation.y=-Math.PI/2-a;outerRing.add(g);
+      box(g,0,1.62,-.11,w,2.85,.2,mat('#e5e9e6'));box(g,0,1.55,.04,w-.12,2.5,.04,new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.4,roughness:.4}));ringSign(g,title,w-.25,.55,'#233040','#ffffff',1.62);
+    }
+    ringBillboard(116,'城市形象灯箱',3.5,'#5baad0');ringBillboard(253,'无锡地铁 · 三阳广场站',4.0,'#f3efe7');
+    // Distinct fixtures visible in the panorama: red drink vendor, station map,
+    // ticket-machine bank, red curtain stall and blue seasonal display.
+    function machine(parent,x,z,color,screen){const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);box(g,0,1.02,0,.72,2.02,.55,mat(color,.44,.18));box(g,0,1.3,.287,.53,.74,.025,new THREE.MeshBasicMaterial({color:screen}));box(g,0,.53,.289,.34,.16,.025,mat('#2d393d'));return g;}
+    machine(outerRing,-9.0,3.8,'#bd2528','#fff9e4');
+    for(let i=0;i<3;i++)machine(outerRing,-1.0+i*.84,-7.02,'#a5aeb1','#56aed8');
+    label(outerRing,'自动售票机',-.15,-6.9,{scale:.53,small:true});
+    const mapPanel=new THREE.Group();mapPanel.position.set(7.9,0,-5.3);mapPanel.rotation.y=-.8;outerRing.add(mapPanel);
+    box(mapPanel,0,1.65,0,3.35,2.05,.12,mat('#343e42'));box(mapPanel,0,1.65,.068,3.14,1.82,.025,new THREE.MeshBasicMaterial({color:'#eaf2ee'}));ringSign(mapPanel,'三阳广场站街区图',3.05,.33,'#182c37','#f2d54f',2.7);
+    const curtain=box(outerRing,6.6,1.3,6.1,2.75,2.6,.1,mat('#9d182a',.9));curtain.rotation.y=-.4;
+    box(outerRing,5.8,.7,6.55,2.2,1.35,.18,mat('#2877a9',.55));label(outerRing,'主题展区',5.8,6.55,{scale:.55,small:true});
+    // The 21–23 side opens into a wide glazed vestibule next to the convenience store.
+    const glassExit=new THREE.Group();glassExit.position.set(3.1,0,-7.66);glassExit.rotation.y=-.37;outerRing.add(glassExit);
+    for(let i=-2;i<=2;i++){box(glassExit,i*.83,1.48,0,.77,2.9,.045,new THREE.MeshStandardMaterial({color:'#b8d7d9',roughness:.14,metalness:.06,transparent:true,opacity:.38,side:THREE.DoubleSide}));box(glassExit,i*.83-.41,1.48,.045,.025,2.9,.035,steel,false);}
+    box(glassExit,0,3.01,0,4.35,.18,.16,mat('#39464b'));ringSign(glassExit,'21—23号口  ↑',3.45,.4,'#152023','#f5d349',3.3);
+    for(const xx of [-1.67,1.67])box(glassExit,xx,1.26,.08,.04,.8,.05,steel,false);
+    // Exit 4: beige portal, escalator and separate accessible elevator.
+    box(outerRing,-9.65,1.84,-5.95,.55,3.65,2.1,mat('#baa992',.45));
+    box(outerRing,-11.15,1.73,-6.15,1.52,3.35,1.55,glassMat);
+    box(outerRing,-11.15,1.42,-5.34,1.12,2.6,.08,mat('#8da4a8',.22,.45));
+    label(outerRing,'4号口 · 无障碍电梯',-10.3,-7.28,{scale:.52,small:true});
+    escalator(outerRing,-8.55,-5.2,-.75);
+    // Exit 14 and Exit 2 are recognizable by orange number walls and stair banks.
+    for(const [n,x,z,rot] of [['14',9.9,4.1,.63],['2',-21.7,3.25,-.2]]){
+      const p=new THREE.Group();p.position.set(x,0,z);p.rotation.y=rot;level1.add(p);
+      box(p,-1.25,1.35,0,.42,2.65,3.0,mat('#d78b1d',.43));ringSign(p,n,1.1,.9,'#d78b1d','#ffe052',1.64);
+      escalator(p,.25,0,0);
+    }
+    // Suspended black/yellow signs mark the branches seen from the outer ring.
+    function hangingRingSign(text,x,z,rot,w=3.9){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;outerRing.add(g);box(g,0,3.17,0,w,.54,.16,mat('#151d20'));ringSign(g,text,w-.12,.44,'#151d20','#f8d739',3.17);for(const xx of [-w*.35,w*.35])box(g,xx,3.57,0,.035,.56,.035,steel,false);}
+    hangingRingSign('↑ 4号口  无障碍电梯',-7.9,-4.25,-.7,4.2);
+    hangingRingSign('↑ 6—11号口  ·  卫生间',1.2,6.55,0,4.7);
+    hangingRingSign('↑ 14号口    → 15—20',8.2,4.4,.8,4.3);
+    hangingRingSign('← 21—23   ↑ 24—27',4.7,-6.45,.55,4.1);
+    for(const x of [-5.6,-4.7]){box(outerRing,x,3.29,-5.55,.6,1.25,.025,mat('#c7192a',.85),false);box(outerRing,x-.13,3.55,-5.53,.07,.07,.035,mat('#e9c84a'),false);}
+    // Repeated square-clad piers at the edge of the north corridor, with dark kick plates.
+    for(const z of [5.5,11.2,17.0,22.5])for(const side of [-1,1]){
+      box(level1,side*2.62,1.46,z,.78,2.85,.82,columnWhite);
+      box(level1,side*2.62,.16,z,.82,.22,.86,mat('#3d494d',.5,.3));
+      box(level1,side*2.62,2.86,z,.82,.12,.86,steel);
+    }
+    // Long dark ceiling fins with bright cross-lights, matching the linear slat ceiling in the walk-through.
+    for(const side of [-1,1])for(let j=0;j<10;j++)box(level1,side*(.3+j*.215),3.34,17.2,.075,.1,26.4,darkSlat,false);
+    const stripLight=new THREE.MeshStandardMaterial({color:'#fff9e8',emissive:'#fff2c9',emissiveIntensity:1.35,roughness:.26});
+    for(const z of [5.7,9.8,14,18.2,22.4,26.6,29.2])box(level1,0,3.27,z,4.9,.045,.15,stripLight,false);
+    // Pale granite seams and a tactile guide strip follow the long north passage.
+    for(let z=5;z<=29;z+=2.1)box(level1,0,.103,z,4.45,.012,.018,tileJoint,false);
+    box(level1,-.55,.116,17.3,.22,.025,25.8,mat('#c2bda7',.72),false);
+    // The corridor wall is broken at the observed exit branches; each opening leads to a real spur.
+    // Split the long north passage walls into sections around the exit mouths.
+    for(const side of [-1,1]){
+      const openings=side<0?[[9.4,11.6],[13.3,15.5],[20.9,23.1],[27.6,30.0]]:[[5.8,8.2],[11.9,14.2],[16.9,19.2],[26.7,29.2]];
+      const intervals=[];let cursor=3.3;
+      for(const [a,b] of openings){if(a>cursor)intervals.push([cursor,a]);cursor=b;}
+      if(cursor<30.6)intervals.push([cursor,30.6]);
+      for(const [a,b] of intervals)box(level1,side*3.34,.95,(a+b)/2,.2,1.9,b-a,wallMat);
+    }
+    // Long blue advertising wall panels seen along one side of the approach,
+    // set only between exit openings so the branch mouths remain clear.
+    const blueAd=new THREE.MeshStandardMaterial({color:'#1788b7',emissive:'#075373',emissiveIntensity:.12,roughness:.38});
+    for(const [z,len] of [[7.9,2.7],[12.55,1.3],[17.7,3.8],[25.2,3.2]]){
+      box(level1,-3.18,1.33,z,.09,1.42,len,blueAd,false);
+      box(level1,-3.115,1.34,z,.035,1.28,len-.16,mat('#36a4ca',.32),false);
+      box(level1,-3.085,2.08,z,.04,.06,len-.16,mat('#e8e9df',.28),false);
+    }
+    // Branch floors widen out from the main passage to both sides, with dark guide strips and thresholds.
+    const branchSpecs=[[-1,10.5,'6'],[-1,14.4,'7'],[-1,22,'8'],[-1,29,'9'],[1,7,'11B'],[1,18,'11A'],[1,28,'10']];
+    for(const [side,z,name] of branchSpecs){
+      slab(level1,side*5.55,z,4.55,2.55,-.015,.12,publicMat);
+      slab(level1,side*5.55,z,3.9,.7,.075,.1,corridorMat);
+      box(level1,side*7.82,.55,z, .18,1.1,2.55,wallMat);
+      label(level1,`出口 ${name}`,side*6.4,z-.94,{scale:.57,small:true});
+    }
+    // Reverse-video forward route runs from the exit end toward the ring (-Z).
+    // The shop appears first, then the entry gates, both on the traveler's right (+X).
+    const shopFrame=mat('#596b70',.48,.25), shopGlass=new THREE.MeshStandardMaterial({color:'#8cc9c8',roughness:.16,metalness:.18,transparent:true,opacity:.56});
+    slab(level1,6.05,24.0,4.7,3.8,-.015,.12,mat('#d8dfd9'));
+    box(level1,3.72,1.35,24.0,.2,2.7,3.8,shopFrame);
+    // Two glazed display bays frame an open central sliding doorway.
+    box(level1,3.86,1.35,22.8,.08,2.3,1.15,shopGlass);
+    box(level1,3.86,1.35,25.2,.08,2.3,1.15,shopGlass);
+    box(level1,3.72,2.82,24.0,.32,.28,3.8,mat('#173f49'));
+    for(const z of [22.15,25.85])box(level1,6.05,1.25,z,4.65,2.5,.16,shopFrame);
+    // Side signs face the passage (-X).
+    function sideSign(text,x,y,z,w=3.3){
+      const c=document.createElement('canvas');c.width=640;c.height=128;const q=c.getContext('2d');q.fillStyle='#17434a';q.fillRect(0,0,640,128);q.fillStyle='#fff4cc';q.font='700 58px "Noto Sans SC",sans-serif';q.textAlign='center';q.textBaseline='middle';q.fillText(text,320,64);
+      const tx=new THREE.CanvasTexture(c);tx.encoding=THREE.sRGBEncoding;const m=new THREE.Mesh(new THREE.PlaneGeometry(w,.58),new THREE.MeshBasicMaterial({map:tx,side:THREE.DoubleSide}));m.position.set(x,y,z);m.rotation.y=-Math.PI/2;level1.add(m);return m;
+    }
+    sideSign('便利超市',3.78,2.75,24.0,3.2);
+    // A few lit shelves and product blocks visible through the glazed frontage.
+    for(let row=0;row<2;row++){
+      box(level1,5.2+row*1.5,.82,24.0,1.12,1.45,.32,mat('#b1aaa0'));
+      for(let k=0;k<4;k++)box(level1,5.2+row*1.5,.48+k*.25,23.85,.78,.16,.25,mat(['#e5ab47','#d66b58','#76a993','#e2d6ac'][(k+row)%4]));
+    }
+    // Entry gates follow the shop along the inward route.
+    box(level1,5.15,.62,21.15,4.7,.12,1.05,mat('#727e80'));
+    for(let i=0;i<5;i++){
+      const x=3.55+i*.78;
+      box(level1,x,.47,21.15,.48,.88,.84,mat('#d1d8d3',.32,.48));
+      box(level1,x,.94,21.15,.29,.06,.36,mat(i===1||i===3?'#53ca83':'#e9c34a',.3,.2));
+      const flap=box(level1,x+(i%2?-.33:.33),.74,21.15,.52,.045,.08,glassMat);flap.rotation.y=Math.PI/2;
+    }
+    sideSign('进站口 / 闸机',3.77,2.0,21.15,2.55);
+    // Restroom opens off the right-hand Exit 11B branch as shown near 11A/B on the source plan.
+    slab(level1,7.55,13.0,2.65,2.5,-.015,.12,mat('#d9dfdc'));
+    box(level1,8.78,1.25,13.0,.18,2.5,2.55,wallMat);
+    box(level1,7.55,1.25,11.77,2.65,2.5,.18,wallMat);
+    box(level1,7.55,1.25,14.23,2.65,2.5,.18,wallMat);
+    sideSign('卫生间  WC',6.25,2.25,13.0,2.45);
+    for(const x of [7.1,8.0]){
+      box(level1,x,.48,13.0,.48,.9,.62,mat('#eef0eb'));
+      box(level1,x,.98,13.0,.13,.08,.16,mat('#477e91'));
+    }
+    // Short wall runs frame the remaining corridor; lit ad panels sit between branch openings.
+    const adColors=['#28a6b7','#ef6685','#f0bd43','#427ec0','#e76b38','#5eb18d'];
+    for(let n=0;n<6;n++)for(const side of [-1,1]){
+      const z=6.8+n*3.05, wallX=side*3.3;
+      const opening=side<0?[[9.4,11.6],[13.3,15.5],[20.9,23.1],[27.6,30.0]]:[[5.8,8.2],[11.9,14.2],[16.9,19.2],[26.7,29.2]];
+      if(opening.some(([a,b])=>z>=a-1.3&&z<=b+1.3))continue;
+      box(level1,wallX,1.1,z,.24,2.2,2.65,wallMat);
+      const panelMat=new THREE.MeshStandardMaterial({color:adColors[(n+(side===1?0:2))%adColors.length],emissive:adColors[(n+(side===1?0:2))%adColors.length],emissiveIntensity:.17,roughness:.42});
+      box(level1,side*3.155,1.55,z,.09,1.2,1.88,panelMat,false);
+      box(level1,side*3.095,1.55,z,.025,.055,1.95,mat('#e9e5d9',.35),false);
+      for(let k=0;k<3;k++)box(level1,side*3.095,1.18+k*.24,z-.28,.026,.045,.82,mat('#fff0d2',.42),false);
+    }
+    // Direction boards at the branch junctions, with their faces visible from either approach.
+    function directionBoard(text,x,z,w=3.5){const g=new THREE.Group();g.position.set(x,2.53,z);level1.add(g);box(g,0,0,0,w,.62,.14,mat('#13232c',.48,.18),false);const c=document.createElement('canvas');c.width=640;c.height=112;const q=c.getContext('2d');q.fillStyle='#10212b';q.fillRect(0,0,640,112);q.fillStyle='#ead04f';q.font='700 48px "Noto Sans SC",sans-serif';q.textAlign='center';q.textBaseline='middle';q.fillText(text,320,56);const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;const geo=new THREE.PlaneGeometry(w-.12,.5),front=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tex}));front.position.z=.077;g.add(front);const backTex=tex.clone();backTex.wrapS=THREE.RepeatWrapping;backTex.repeat.x=-1;backTex.offset.x=1;backTex.needsUpdate=true;const back=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:backTex}));back.position.z=-.077;back.rotation.y=Math.PI;g.add(back);return g;}
+    directionBoard('出口 6 · 7 ←　　　2号线 ↑',0,10.2,4.9);
+    directionBoard('出口 8 · 9 ←　　　出口 10 →',0,22.1,4.9);
+    directionBoard('出口 11A · 11B →',0,17.1,4.25);
+    // A broad stair flight beside the 11A escalator, with visible treads and stainless handrails.
+    function stairFlight(parent,x,z,width=1.45,run=3.8,rise=1.55){const g=new THREE.Group();g.position.set(x,.11,z);parent.add(g);const count=13,step=run/count;for(let i=0;i<count;i++){const h=rise*(i+1)/count,t=box(g,0,h/2,-run/2+step*(i+.5),width,h,step*.96,mat(i%2?'#c5cbc7':'#aeb8b4',.5));t.castShadow=true;}const railLen=Math.hypot(run,rise);for(const side of [-1,1]){const rail=box(g,side*(width*.58),rise/2+.62,0,.075,.08,railLen,steel);rail.rotation.x=-Math.atan2(rise,run);const postCount=5;for(let i=0;i<postCount;i++){const f=i/(postCount-1);box(g,side*(width*.58),.18+rise*f+.3,-run/2+run*f,.055,.62,.055,steel);}}box(g,0,.07,run/2+.35,width+1.15,.14,.7,mat('#bfc7c2'));return g;}
+    // Paired stair/escalator bank is set in the 11A spur, leaving the main north-south route open.
+    const stair11a=stairFlight(level1,4.35,18,1.4,3.7,1.65);stair11a.rotation.y=Math.PI/2;
+    escalator(level1,6.8,18,Math.PI/2);
+    box(level1,6.35,.25,18,.48,.18,3.15,mat('#cbd0cc'));
+    label(level1,'站厅 / 换乘',0,0,{scale:1.12}); label(level1,'公共通道',-15,1,{scale:.85}); label(level1,'公共通道',17,1,{scale:.85}); label(level1,'向南换乘',-2,26,{scale:.8});
+
+    // Apply the requested B1 hall enlargement as one consistent horizontal scale,
+    // preserving every fixture's relative size and all vertical clearances.
+    const hallScale=5;
+    level1.scale.set(hallScale,1,hallScale);
+
+    // B2: lower platform and tracks, positioned under the central B1 station.
+    slab(level2,0,-1,24,38,-5.0,1.0,mat('#34414b'));
+    slab(level2,0,-1,8,31,-4.38,.2,platformMat);
+    slab(level2,-7.3,-1,3.5,31,-4.4,.18,trackMat); slab(level2,7.3,-1,3.5,31,-4.4,.18,trackMat);
+    [-8.1,-6.5,6.5,8.1].forEach(x=>{box(level2,x,-4.24,-1,.11,.12,31,mat('#b6a35e'));});
+    [-4.2,4.2].forEach(x=>{slab(level2,x,-1,.3,29,-4.27,.08,yellowMat);});
+    for(let z=-13;z<=12;z+=5){[-2.2,2.2].forEach(x=>{const p=box(level2,x,-3.55,z,.48,1.55,.48,pillarMat);p.material=mat('#b2b8b4');});}
+    for(let z=-10;z<=10;z+=10){box(level2,0,-3.95,z,2.8,.36,.7,mat('#59686e'));}
+    label(level2,'站台层',0,-15,{color:'#edf4f1',bg:'#33434b',scale:1.05});
+    label(level2,'轨道区',0,14,{color:'#edf4f1',bg:'#33434b',scale:.8});
+    const core=box(level2,0,-2.1,-1,3.6,3.4,4.3,glassMat); core.material.side=THREE.DoubleSide;
+    escalator(level2,-1.1,-1,0).position.y=-4.23; escalator(level2,1.1,-1,Math.PI).position.y=-4.23;
+
+    // Ground plane, grid and faint survey frame.
+    const ground=new THREE.Mesh(new THREE.PlaneGeometry(1500,1500),mat('#0d1820'));ground.rotation.x=-Math.PI/2;ground.position.y=-5.65;ground.receiveShadow=true;scene.add(ground);
+    const grid=new THREE.GridHelper(1150,115,'#29414b','#1b2b34');grid.position.y=-5.61;grid.material.transparent=true;grid.material.opacity=.27;scene.add(grid);
+    // subtle corner registration marks
+    const marks=new THREE.Group();scene.add(marks);
+    const exitsByName=new Map(exits.map(e=>[e[0],e]));
+
+    const raycaster=new THREE.Raycaster(), mouse=new THREE.Vector2(), tip=document.querySelector('#tip'), walkHelp=document.querySelector('#walk-help');
+    let walking=false, savedView=null, walkX=0, walkZ=23.2*hallScale, walkYaw=Math.PI, walkPitch=0, dragLook=false, dragX=0, dragY=0;
+    const held=new Set();
+    function isWalkable(x,z){
+      const u=x/hallScale,v=z/hallScale;
+      const hub=(u*u)/(6.85*6.85)+(v*v)/(5.05*5.05)<=1;
+      const ringOuter=(u*u)/(9.98*9.98)+(v*v)/(7.62*7.62)<=1;
+      const ringInner=(u*u)/(5.65*5.65)+(v*v)/(4.35*4.35)>=1;
+      const outerLane=ringOuter&&ringInner;
+      const spine=Math.abs(u)<=2.26&&v>=.1&&v<=30.6;
+      const westMain=u>=-31&&u<=-2.5&&v>=-.95&&v<=3.0;
+      const eastMain=u>=2.5&&u<=44.8&&v>=-.95&&v<=3.0;
+      const southMain=Math.abs(u)<=3.25&&v>=-20.5&&v<=.5;
+      const southBend=u>=-7.8&&u<=1.0&&v>=-29&&v<=-15.5;
+      const southEnd=u>=-8.0&&u<=.0&&v>=-35.5&&v<=-26;
+      const west6=v>=9.4&&v<=11.7&&u>=-6.7&&u<=-1.9;
+      const west7=v>=13.2&&v<=15.6&&u>=-6.7&&u<=-1.9;
+      const west8=v>=20.7&&v<=23.3&&u>=-6.7&&u<=-1.9;
+      const west9=v>=27.3&&v<=30.4&&u>=-5.0&&u<=-1.9;
+      const restroom=v>=11.7&&v<=14.4&&u>=4.4&&u<=9.0;
+      const east11b=v>=5.7&&v<=8.3&&u>=1.9&&u<=8.9;
+      const east11a=v>=16.8&&v<=19.3&&u>=1.9&&u<=8.1;
+      const east10=v>=26.4&&v<=29.4&&u>=1.9&&u<=8.3;
+      const shopFront=v>=20.2&&v<=26.0&&u>=1.9&&u<=8.5;
+      if(!(hub||outerLane||spine||westMain||eastMain||southMain||southBend||southEnd||west6||west7||west8||west9||restroom||east11b||east11a||east10||shopFront))return false;
+      for(const [px,pz] of pierSpecs)if(Math.hypot(x-px*hallScale,z-pz*hallScale)<.88)return false;
+      for(const [px,pz] of outerPierSpecs)if(Math.hypot(x-px*hallScale,z-pz*hallScale)<1.03)return false;
+      if(Math.abs(x-6.6*hallScale)<1.6&&Math.abs(z-13*hallScale)<.7)return false;
+      for(const pz of [5.5,11.2,17,22.5])for(const side of [-1,1])if(Math.abs(x-side*2.62*hallScale)<.62&&Math.abs(z-pz*hallScale)<.68)return false;
+      return true;
+    }
+    function setWalkLook(){camera.rotation.order='YXZ';camera.rotation.set(walkPitch,walkYaw+Math.PI,0,'YXZ');}
+    function nearestWalkPoint(x,z){
+      if(isWalkable(x,z))return [x,z];
+      const u=x/hallScale,v=z/hallScale;
+      for(let r=.15;r<=50;r+=.15){const n=Math.max(12,Math.ceil(2*Math.PI*r/.15));for(let i=0;i<n;i++){const a=i*2*Math.PI/n,px=(u+Math.cos(a)*r)*hallScale,pz=(v+Math.sin(a)*r)*hallScale;if(isWalkable(px,pz))return [px,pz];}}
+      return [0,23.2*hallScale];
+    }
+    function capturePointer(){try{const pending=renderer.domElement.requestPointerLock?.();if(pending&&pending.catch)pending.catch(()=>{});}catch(_){}}
+    function enterWalk(){
+      if(walking){leaveWalk(true);return;}
+      const direction=new THREE.Vector3();mapCamera.getWorldDirection(direction);
+      const [startX,startZ]=nearestWalkPoint(controls.target.x,controls.target.z);
+      savedView={position:mapCamera.position.clone(),target:controls.target.clone(),zoom:mapCamera.zoom,level1:level1.visible,level2:level2.visible,rotationOrder:mapCamera.rotation.order,rootRotation:root.rotation.y};
+      walking=true;walkX=startX;walkZ=startZ;walkYaw=Math.atan2(direction.x,direction.z);walkPitch=Math.max(-.18,Math.min(.18,Math.asin(THREE.MathUtils.clamp(direction.y,-1,1))));level1.visible=true;level2.visible=false;
+      root.rotation.y=0;switchCamera(walkCamera,new THREE.Vector3(walkX,1.65,walkZ));camera.position.set(walkX,1.65,walkZ);setWalkLook();walkHelp.hidden=false;walkHelp.innerHTML='从当前地图焦点进入第一视角；切回地图会定位到当前位置<br>W A S D 移动 · 鼠标转向 · Q / E 转向<br>Esc 解锁鼠标 · 点「第一视角」返回建模视图';
+      controls.enabled=false;capturePointer();
+    }
+    function leaveWalk(focusPlayer=false){
+      const playerX=walkX,playerZ=walkZ;walking=false;held.clear();if(document.pointerLockElement===renderer.domElement&&document.exitPointerLock)document.exitPointerLock();
+      if(savedView){level1.visible=focusPlayer?true:savedView.level1;level2.visible=focusPlayer?false:savedView.level2;root.rotation.y=focusPlayer?0:savedView.rootRotation;switchCamera(mapCamera,focusPlayer?new THREE.Vector3(playerX,0,playerZ):savedView.target);
+        if(focusPlayer){mapCamera.position.set(playerX+95,95,playerZ+145);mapCamera.zoom=1.3;}
+        else{mapCamera.position.copy(savedView.position);mapCamera.zoom=savedView.zoom;mapCamera.rotation.order=savedView.rotationOrder;}
+        mapCamera.updateProjectionMatrix();savedView=null;
+      }
+      walkHelp.hidden=true;controls.enabled=true;controls.update();
+    }
+    function updateWalk(dt){
+      if(held.has('q'))walkYaw+=1.5*dt;if(held.has('e'))walkYaw-=1.5*dt;
+      const forwardX=Math.sin(walkYaw),forwardZ=Math.cos(walkYaw),rightX=-Math.cos(walkYaw),rightZ=Math.sin(walkYaw);
+      let dx=0,dz=0;if(held.has('w')||held.has('arrowup')){dx+=forwardX;dz+=forwardZ;}if(held.has('s')||held.has('arrowdown')){dx-=forwardX;dz-=forwardZ;}
+      if(held.has('d')||held.has('arrowright')){dx+=rightX;dz+=rightZ;}if(held.has('a')||held.has('arrowleft')){dx-=rightX;dz-=rightZ;}
+      const mag=Math.hypot(dx,dz);if(mag){const speed=(held.has('shift')?4.2:2.65)*hallScale;dx=dx/mag*speed*dt;dz=dz/mag*speed*dt;if(isWalkable(walkX+dx,walkZ))walkX+=dx;if(isWalkable(walkX,walkZ+dz))walkZ+=dz;}
+      camera.position.set(walkX,1.65,walkZ);setWalkLook();
+    }
+    renderer.domElement.addEventListener('pointerdown',ev=>{if(walking&&document.pointerLockElement!==renderer.domElement){dragLook=true;dragX=ev.clientX;dragY=ev.clientY;}});
+    renderer.domElement.addEventListener('pointerup',()=>{dragLook=false;});
+    renderer.domElement.addEventListener('pointermove',ev=>{if(walking){if(dragLook&&document.pointerLockElement!==renderer.domElement){walkYaw-=(ev.clientX-dragX)*.0021;walkPitch=Math.max(-.72,Math.min(.55,walkPitch-(ev.clientY-dragY)*.0018));dragX=ev.clientX;dragY=ev.clientY;setWalkLook();}tip.style.opacity=0;return;}mouse.x=(ev.clientX/innerWidth)*2-1;mouse.y=-(ev.clientY/innerHeight)*2+1;raycaster.setFromCamera(mouse,camera);const hits=raycaster.intersectObjects(exitObjects,true);if(hits.length){const obj=hits[0].object;let p=obj;while(p&&!p.userData.exit)p=p.parent;if(p){tip.innerHTML=`<strong>EXIT ${p.userData.exit}</strong>　点击查看出口位置`;tip.style.opacity=1;tip.style.left=ev.clientX+'px';tip.style.top=ev.clientY+'px';return;}}tip.style.opacity=0;});
+    renderer.domElement.addEventListener('click',ev=>{if(walking){if(document.pointerLockElement!==renderer.domElement)capturePointer();return;}mouse.x=(ev.clientX/innerWidth)*2-1;mouse.y=-(ev.clientY/innerHeight)*2+1;raycaster.setFromCamera(mouse,camera);const hits=raycaster.intersectObjects(exitObjects,true);if(!hits.length)return;let p=hits[0].object;while(p&&!p.userData.exit)p=p.parent;if(p){const e=exitsByName.get(p.userData.exit);controls.target.set(e[1]*hallScale,0,e[2]*hallScale);}});
+    document.addEventListener('mousemove',ev=>{if(!walking||document.pointerLockElement!==renderer.domElement)return;walkYaw-=ev.movementX*.0021;walkPitch=Math.max(-.72,Math.min(.55,walkPitch-ev.movementY*.0018));setWalkLook();});
+    document.addEventListener('pointerlockchange',()=>{if(walking)walkHelp.innerHTML=document.pointerLockElement===renderer.domElement?'W A S D 移动 · 鼠标转向<br>方向键前后/横移 · Q / E 转向<br>Esc 解锁鼠标 · 点「第一视角」返回':'鼠标已解锁 · 点画面可重新捕获<br>W A S D 移动 · Q / E 转向<br>点「第一视角」返回模型视角';});
+    document.addEventListener('keydown',ev=>{const k=ev.key.toLowerCase();if(walking&&['w','a','s','d','q','e','arrowup','arrowdown','arrowleft','arrowright','shift'].includes(k)){held.add(k);ev.preventDefault();}});
+    document.addEventListener('keyup',ev=>held.delete(ev.key.toLowerCase()));
+    window.addEventListener('blur',()=>held.clear());
+    document.querySelectorAll('.level').forEach(btn=>btn.addEventListener('click',()=>{const v=btn.dataset.level;if(v==='walk'){if(walking){leaveWalk(true);document.querySelectorAll('.level').forEach(b=>b.classList.toggle('active',b.dataset.level==='b1'));}else{enterWalk();document.querySelectorAll('.level').forEach(b=>b.classList.toggle('active',b===btn));}return;}if(walking)leaveWalk();document.querySelectorAll('.level').forEach(b=>b.classList.toggle('active',b===btn));if(v==='b1'){level1.visible=true;level2.visible=false;controls.target.set(0,0,0);mapCamera.position.set(0,260,330);mapCamera.zoom=1;}else if(v==='b2'){level1.visible=false;level2.visible=true;controls.target.set(0,-4.6,-1);mapCamera.position.set(29,25,37);mapCamera.zoom=3.8;}else{level1.visible=true;level2.visible=true;controls.target.set(0,-2,0);mapCamera.position.set(440,540,650);mapCamera.zoom=.4;}mapCamera.updateProjectionMatrix();controls.update();}));
+    level2.visible=false;
+    addEventListener('resize',()=>{const a=innerWidth/innerHeight;mapCamera.left=-cameraViewHeight*a/2;mapCamera.right=cameraViewHeight*a/2;mapCamera.top=cameraViewHeight/2;mapCamera.bottom=-cameraViewHeight/2;mapCamera.updateProjectionMatrix();walkCamera.aspect=a;walkCamera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+    const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);if(walking)updateWalk(dt);else controls.update();const t=clock.elapsedTime;if(!walking)root.rotation.y=Math.sin(t*.11)*.025;renderer.render(scene,camera);}animate();
+  </script>
+</body>
+</html>
