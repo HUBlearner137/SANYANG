@@ -222,17 +222,42 @@
     const wc=group('11出口对侧卫生间前厅与洗手区',19,21.2);
     wall(wc,-4,0,.18,7);wall(wc,4,0,.18,7);wall(wc,0,-3.5,8,.18);
     wall(wc,-3.12,3.5,1.75,.18);wall(wc,3.12,3.5,1.75,.18);
-    for(const x of [-2.25,2.25]){
-      b(wc,x,1.5,3.53,.06,2.8,.13,glass,true);
-      b(wc,x,3.03,3.53,.12,.11,.17,'#8f9c99',false,.65);
+    // Exterior is a bright, layered portal: white stone surround, red accent,
+    // warm perforated side panels, and paired sliding glass leaves.
+    b(wc,0,3.12,3.61,4.72,.2,.3,'#f4f0e7');
+    b(wc,0,2.94,3.78,4.88,.055,.045,material('#c83a36',0,true));
+    for(const x of [-2.39,2.39]){
+      b(wc,x,1.52,3.61,.2,2.92,.3,'#f4f0e7');
+      b(wc,x,1.49,3.79,.055,2.84,.045,material('#c83a36',0,true));
+      b(wc,x,1.5,3.53,.045,2.78,.13,glass,false,.2);
+      b(wc,x,2.98,3.53,.12,.11,.17,'#8f9c99',false,.65);
+    }
+    // The golden dotted cladding is a single textured panel on each side,
+    // giving the entrance its photographed glow without hundreds of meshes.
+    const perforated=document.createElement('canvas');perforated.width=512;perforated.height=512;
+    const pg=perforated.getContext('2d');pg.fillStyle='#b99757';pg.fillRect(0,0,512,512);
+    for(let y=10;y<512;y+=24)for(let x=10;x<512;x+=24){pg.beginPath();pg.arc(x,y,4.4,0,Math.PI*2);pg.fillStyle=(x+y)%48?'#f1d18b':'#8e713f';pg.fill();}
+    const perforatedMap=new T.CanvasTexture(perforated);perforatedMap.encoding=T.sRGBEncoding;perforatedMap.anisotropy=4;
+    const perforatedMat=new T.MeshStandardMaterial({map:perforatedMap,color:'#fff3d4',roughness:.46,metalness:.18,emissive:'#6b4b1d',emissiveIntensity:.22});
+    for(const x of [-3.2,3.2]){
+      const panel=new T.Mesh(new T.PlaneGeometry(1.52,2.72),perforatedMat);panel.position.set(x,1.55,3.58);wc.add(panel);
+      b(wc,x-.8,1.55,3.63,.07,2.88,.12,'#d5c5a2');b(wc,x+.8,1.55,3.63,.07,2.88,.12,'#d5c5a2');
     }
     b(wc,0,3.17,3.52,7.9,.37,.24,'#e3dacb');
     sign(wc,'卫生间  TOILET',0,3.18,3.66,4.8,.31,'#e3dacb','#54472b');
-    sign(wc,'男  MEN        女  WOMEN',0,2.61,3.61,4.1,.27,'#c1a66f','#fff8df');
-    for(const x of [-3.38,3.38])for(let row=0;row<10;row++)for(let col=0;col<4;col++){
-      const px=x+(col-1.5)*.22,py=.43+row*.22;
-      b(wc,px,py,3.62,.046,.046,.014,material('#f5d897',0,true));
+    sign(wc,'男 MEN       女 WOMEN',0,2.61,3.61,4.1,.27,'#c1a66f','#fff8df');
+    // Door glazing, slim mullions, pull bars and the illuminated threshold.
+    for(const x of [-1.5,1.5]){
+      b(wc,x,1.42,3.59,1.15,2.58,.045,glass,false,.15);
+      b(wc,x-.575,1.42,3.625,.035,2.58,.045,'#a9b5b2',false,.7);
+      b(wc,x+.575,1.42,3.625,.035,2.58,.045,'#a9b5b2',false,.7);
+      b(wc,x+(x<0?.42:-.42),1.25,3.66,.035,.68,.045,'#d8e3e0',false,.8);
     }
+    b(wc,0,.14,3.7,4.55,.055,.46,'#969c99');
+    b(wc,0,.177,3.7,4.2,.012,.34,material('#c3b57e',0,true));
+    // Three stacked sign bands make the frontage legible from the passage.
+    sign(wc,'男厕  MEN',-3.2,2.84,3.67,1.28,.28,'#304f67','#fff4d8');
+    sign(wc,'女厕  WOMEN',3.2,2.84,3.67,1.46,.28,'#8c4057','#fff4d8');
     torus(wc,0,3.27,1.5,1.48,.1,'#eaf5ff');
     cyl(wc,0,3.39,1.5,1.78,.055,'#e4d8bd');
     for(let i=0;i<=30;i++){

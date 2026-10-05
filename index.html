@@ -162,7 +162,9 @@
     for(let i=0;i<16;i++){const a=i*Math.PI/8, mid=4.95, len=1.72;const seam=box(level1,Math.cos(a)*mid,.112,Math.sin(a)*mid,.018,.012,len,mat('#86918f',.5));seam.rotation.y=a;}
     // Tall glazed-white round piers with stainless plinths and illuminated crown rings.
     const pierSpecs=[];
-    for(let i=0;i<16;i++){const a=(i+.5)*Math.PI/8,x=Math.cos(a)*5.55,z=Math.sin(a)*4.08;pierSpecs.push([x,z,i]);
+    // Eight broad crowned piers follow the photographed rotunda rhythm.
+    // Wider spacing keeps the open ring readable at both map and walking scales.
+    for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4,x=Math.cos(a)*5.55,z=Math.sin(a)*4.08;pierSpecs.push([x,z,i]);
       const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.56,.61,3.9,40),columnWhite);shaft.position.set(x,2.08,z);shaft.castShadow=true;shaft.receiveShadow=true;level1.add(shaft);
       const foot=new THREE.Mesh(new THREE.CylinderGeometry(.69,.69,.16,48),steel);foot.position.set(x,.15,z);foot.castShadow=true;level1.add(foot);
       const collar=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.09,48),mat('#e0e4df',.25,.35));collar.position.set(x,3.72,z);level1.add(collar);
@@ -200,9 +202,9 @@
       const wrap=new THREE.Mesh(new THREE.CylinderGeometry(.752,.752,2.5,48,1,true),new THREE.MeshBasicMaterial({map:tx,side:THREE.DoubleSide}));wrap.position.set(x,2.03,z);outerRing.add(wrap);
     }
     const outerShafts=[],outerFeet=[],outerHalos=[];
-    for(let i=0;i<12;i++){const a=(i+.5)*Math.PI/6,x=8.15*Math.cos(a),z=6.2*Math.sin(a);outerPierSpecs.push([x,z]);
+    for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4,x=8.15*Math.cos(a),z=6.2*Math.sin(a);outerPierSpecs.push([x,z]);
       outerShafts.push({x,y:2.02,z,sx:1,sy:3.75,sz:1});outerFeet.push({x,y:.19,z,sx:1,sy:.17,sz:1});outerHalos.push({x,y:3.94,z,rx:Math.PI/2,sx:.87,sy:.87,sz:.87});
-      if(i===1)wrapAdColumn(x,z,'blue');if(i===7)wrapAdColumn(x,z,'green');
+      if(i===1)wrapAdColumn(x,z,'blue');if(i===5)wrapAdColumn(x,z,'green');
     }
     instancedMeshes(outerRing,new THREE.CylinderGeometry(.73,.76,1,32),columnWhite,outerShafts,{castShadow:true,receiveShadow:true});
     instancedMeshes(outerRing,new THREE.CylinderGeometry(.83,.83,1,32),steel,outerFeet);
