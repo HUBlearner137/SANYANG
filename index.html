@@ -51,6 +51,7 @@
   <div class="tooltip" id="tip"></div>
   <script src="./assets/three.min.js"></script>
   <script src="./assets/OrbitControls.js"></script>
+  <script src="./assets/station-surfaces.js"></script>
   <script src="./assets/station-details.js"></script>
   <script>
 
@@ -63,18 +64,20 @@
     const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:'high-performance'}); renderer.setPixelRatio(Math.min(devicePixelRatio,1.5)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0; document.querySelector('#stage').appendChild(renderer.domElement);
     let controls = new THREE.OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.dampingFactor=.06; controls.target.set(4,0,-8); controls.minDistance=24; controls.maxDistance=2400; controls.minZoom=.55; controls.maxZoom=8; controls.maxPolarAngle=Math.PI*.47;
     function switchCamera(next,target){controls.dispose();camera=next;controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;controls.minDistance=8;controls.maxDistance=2400;controls.minZoom=.55;controls.maxZoom=8;controls.maxPolarAngle=Math.PI*.47;if(target)controls.target.copy(target);}
-    scene.add(new THREE.HemisphereLight('#dbeaf0','#18232d',2.0));
-    const keyLight=new THREE.DirectionalLight('#fff2cf',2.35); keyLight.position.set(-32,42,26); keyLight.castShadow=true; keyLight.shadow.mapSize.set(1024,1024); keyLight.shadow.camera.left=-72; keyLight.shadow.camera.right=72; keyLight.shadow.camera.top=72; keyLight.shadow.camera.bottom=-72; keyLight.shadow.camera.near=1; keyLight.shadow.camera.far=190; keyLight.shadow.bias=-.0004; scene.add(keyLight);
+    const ambient=new THREE.HemisphereLight('#eee9dc','#505557',1.0);scene.add(ambient);
+    const keyLight=new THREE.DirectionalLight('#fff2df',1.45); keyLight.position.set(-32,42,26); keyLight.castShadow=true; keyLight.shadow.mapSize.set(1024,1024); keyLight.shadow.camera.left=-72; keyLight.shadow.camera.right=72; keyLight.shadow.camera.top=72; keyLight.shadow.camera.bottom=-72; keyLight.shadow.camera.near=1; keyLight.shadow.camera.far=190; keyLight.shadow.bias=-.0004; scene.add(keyLight);
     const fill=new THREE.DirectionalLight('#8fb8c2',.72); fill.position.set(32,22,-35); scene.add(fill);
     const materialCache=new Map();
     const mat=(color,roughness=.8,metalness=0)=>{const k=[color,roughness,metalness].join('|');if(!materialCache.has(k))materialCache.set(k,new THREE.MeshStandardMaterial({color,roughness,metalness}));return materialCache.get(k);};
     const floorMat=mat('#cfd3d0',.48), publicMat=mat('#b8bfbb',.4), corridorMat=mat('#a1a8a5',.48), edgeMat=mat('#31556a'), yellowMat=mat('#edc949',.6), wallMat=mat('#e1e3de',.5), pillarMat=mat('#7c9498'), platformMat=mat('#929ba0'), trackMat=mat('#333e47'), stairMat=mat('#ddbd4b'), glassMat=new THREE.MeshStandardMaterial({color:'#78b9c0',roughness:.2,metalness:.25,transparent:true,opacity:.46});
+    for(const material of [floorMat,publicMat,corridorMat,platformMat]){const finish=StationSurfaces.finish(THREE,'#'+material.color.getHexString(),'stone',.48);material.onBeforeCompile=finish.onBeforeCompile;material.customProgramCacheKey=finish.customProgramCacheKey;}
     const root=new THREE.Group(); scene.add(root); const level1=new THREE.Group(), level2=new THREE.Group(); root.add(level1,level2);
     const unitBoxGeometry=new THREE.BoxGeometry(1,1,1), instanceTransform=new THREE.Object3D();
     function box(parent,x,y,z,w,h,d,material,shadow=false){const o=new THREE.Mesh(unitBoxGeometry,material);o.position.set(x,y,z);o.scale.set(w,h,d);o.castShadow=shadow;o.receiveShadow=true;parent.add(o);return o;}
     function instancedBoxes(parent,items,material,{castShadow=false,receiveShadow=true}={}){if(!items.length)return null;const mesh=new THREE.InstancedMesh(unitBoxGeometry,material,items.length);for(let i=0;i<items.length;i++){const q=items[i];instanceTransform.position.set(q.x,q.y,q.z);instanceTransform.rotation.set(0,q.r||0,0);instanceTransform.scale.set(q.w,q.h,q.d);instanceTransform.updateMatrix();mesh.setMatrixAt(i,instanceTransform.matrix);}mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=castShadow;mesh.receiveShadow=receiveShadow;parent.add(mesh);return mesh;}
     function instancedMeshes(parent,geometry,material,items,{castShadow=false,receiveShadow=true}={}){if(!items.length)return null;const mesh=new THREE.InstancedMesh(geometry,material,items.length);for(let i=0;i<items.length;i++){const q=items[i];instanceTransform.position.set(q.x,q.y,q.z);instanceTransform.rotation.set(q.rx||0,q.ry||0,q.rz||0);instanceTransform.scale.set(q.sx||1,q.sy||1,q.sz||1);instanceTransform.updateMatrix();mesh.setMatrixAt(i,instanceTransform.matrix);}mesh.instanceMatrix.needsUpdate=true;mesh.castShadow=castShadow;mesh.receiveShadow=receiveShadow;parent.add(mesh);return mesh;}
-    function slab(parent,x,z,w,d,y=-.35,h=.7,material=floorMat){const m=box(parent,x,y,z,w,h,d,material);if(parent===level1)m.userData.planSurface=true;return m;}
+    const legacyFloors=[],legacyColliders=[];
+    function slab(parent,x,z,w,d,y=-.35,h=.7,material=floorMat){const m=box(parent,x,y,z,w,h,d,material);if(parent===level1){m.userData.planSurface=true;if(y<0)legacyFloors.push({x,z,w,d});}return m;}
     function roundedHall(parent,x,z,rx,rz,y=-.04,material=publicMat){const g=new THREE.CircleGeometry(1,64);g.scale(rx,rz,1);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,material);m.position.set(x,y,z);m.receiveShadow=true;if(parent===level1)m.userData.planSurface=true;parent.add(m);return m;}
     function pathLine(parent,pts,r=.065,y=.045,color='#d9e7df'){const curve=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],y,p[1])));const m=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.max(16,pts.length*8),r,8,false),mat(color,.7));if(parent===level1)m.userData.planSurface=true;parent.add(m);return m;}
     const fontCanvas=document.createElement('canvas'), ctx=fontCanvas.getContext('2d');
@@ -122,8 +125,8 @@
     exits.forEach(([name,x,z,sx,sz],i)=>{
       // connector to the exit marker, emphasized as a narrow threshold.
       const dx=sx-x,dz=sz-z; const len=Math.hypot(dx,dz); const angle=Math.atan2(dz,dx);
-      const c=box(level1,x+dx/2,.18,z+dz/2,len,.16,.75,publicMat); c.rotation.y=-angle;c.userData.planSurface=true;
-      if(!StationDetails.layout.exits[name]) {
+      const c=box(level1,x+dx/2,.18,z+dz/2,len,.16,.75,publicMat); c.rotation.y=-angle;c.userData.planSurface=true;c.userData.mapOnly=true;
+      if(!StationDetails.layout.exits[name]&&!['2','14','24'].includes(name)) {
       const stair= new THREE.Group(); stair.position.set(sx,.16,sz); stair.rotation.y=-angle; level1.add(stair);
       box(stair,0,.12,0,2.15,.25,2.8,stairMat);
       for(let j=0;j<7;j++)box(stair,-.72+j*.24,.27+j*.045,.1,.13,.08,2.05,mat(j%2?'#ffe778':'#d8b83c'));
@@ -137,13 +140,13 @@
     const walls=[[-30,-1,20,.18],[30,-1,19,.18]];
     walls.forEach(([x,z,w,d])=>box(level1,x,.43,z,w,.86,d,wallMat,true));
     // Undo edges along openings: short segments leave clear routes through the spine.
-    const cols=[[-2.4,-4],[2.4,-4],[-2.4,4],[2.4,4],[-2.35,-15],[2.35,-15],[-11,2],[-20,2],[11,2],[20,2],[30,2],[38,2]];
+    const cols=[[-2.35,-15],[2.35,-15],[-11,2],[-20,2],[20,2],[30,2],[38,2]];
     cols.forEach(([x,z])=>{const p=box(level1,x,.75,z,.42,1.45,.42,pillarMat,true);p.material=mat('#8da2a3',.45,.2);});
     // Small planted/service islands and wayfinding beacons.
     [[-12,-7],[18,-3]].forEach(([x,z])=>{box(level1,x,.22,z,2.5,.35,1.25,mat('#d4d8cd'));box(level1,x,.45,z,.12,.08,.8,yellowMat);});
     // Escalator banks near transfer and vertical branch.
-    function escalator(parent,x,z,rot=0){const g=new THREE.Group();g.position.set(x,.24,z);g.rotation.y=rot;parent.add(g);box(g,0,.05,0,1.35,.18,4.5,mat('#727e83'));for(let i=0;i<13;i++){const st=box(g,0,.17+i*.018,-1.8+i*.3,1.08,.12,.23,stairMat);st.rotation.x=-.11;}[-.68,.68].forEach(s=>box(g,s,.54,0,.07,.78,4.6,mat('#b7c8c5',.3,.3)));return g;}
-    escalator(level1,-3.9,5,.12);escalator(level1,4.05,6,-.12);escalator(level1,-.2,-3,Math.PI/2);
+    function escalator(parent,x,z,rot=0){const g=new THREE.Group();g.position.set(x,.24,z);g.rotation.y=rot;parent.add(g);box(g,0,.05,0,1.35,.18,4.5,mat('#727e83'));for(let i=0;i<13;i++){const st=box(g,0,.17+i*.018,-1.8+i*.3,1.08,.12,.23,stairMat);st.rotation.x=-.11;}[-.68,.68].forEach(s=>box(g,s,.54,0,.07,.78,4.6,mat('#b7c8c5',.3,.3)));if(parent===level1)legacyColliders.push({x,z,w:1.48,d:4.6,angle:rot,name:'扶梯占地'});return g;}
+    escalator(level1,-5.1,4.7,0);escalator(level1,5.1,4.7,0);escalator(level1,0,-.3,0);
     // Upper geometry on B1 to make the miniature read as an architectural model.
     const borderMat=mat('#92a5a4');
     // Stations/shops on the perimeter are kept low so the circulation remains legible.
@@ -177,8 +180,10 @@
     // The photographs circle the *outside* of this hall.  Add its wide walking band
     // separately from the inner rotunda so the shop and exit frontage has room.
     const outerRing=new THREE.Group();outerRing.name='站厅外圈（照片还原）';level1.add(outerRing);
-    const outerFloorGeo=new THREE.RingGeometry(5.95,10.35,112);outerFloorGeo.scale(1,.77,1);outerFloorGeo.rotateX(-Math.PI/2);
+    const outerFloorGeo=new THREE.RingGeometry(5.95,11.5,112);outerFloorGeo.scale(1,.77,1);outerFloorGeo.rotateX(-Math.PI/2);
     const outerFloor=new THREE.Mesh(outerFloorGeo,mat('#c6cac6',.24,.08));outerFloor.position.y=.086;outerFloor.receiveShadow=true;outerFloor.userData.planSurface=true;outerRing.add(outerFloor);
+    outerFloor.material=StationSurfaces.finish(THREE,'#c6cac6','stone',.43,.04);
+    const rotundaRoof=new THREE.Mesh(new THREE.CircleGeometry(1,96),mat('#dddcd4',.82));rotundaRoof.geometry.scale(11.5,8.855,1);rotundaRoof.rotation.x=Math.PI/2;rotundaRoof.position.y=4.2;rotundaRoof.userData.cutaway=true;outerRing.add(rotundaRoof);
     for(const r of [6.02,9.97])horizontalTorus(outerRing,r,r*.77,.023,.105,mat('#899491',.4));
     // Broad pale stone tiles, intermittent ceiling grilles and the long white light strips.
     const tileJoint=mat('#8d9691',.66), ringLight=new THREE.MeshStandardMaterial({color:'#fffdf2',emissive:'#fff4cf',emissiveIntensity:1.1,roughness:.25});
@@ -202,7 +207,7 @@
       const wrap=new THREE.Mesh(new THREE.CylinderGeometry(.752,.752,2.5,48,1,true),new THREE.MeshBasicMaterial({map:tx,side:THREE.DoubleSide}));wrap.position.set(x,2.03,z);outerRing.add(wrap);
     }
     const outerShafts=[],outerFeet=[],outerHalos=[];
-    for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4,x=8.15*Math.cos(a),z=6.2*Math.sin(a);outerPierSpecs.push([x,z]);
+    for(let i=0;i<8;i++){const a=(i+.5)*Math.PI/4,x=9.15*Math.cos(a),z=7.0*Math.sin(a);outerPierSpecs.push([x,z]);
       outerShafts.push({x,y:2.02,z,sx:1,sy:3.75,sz:1});outerFeet.push({x,y:.19,z,sx:1,sy:.17,sz:1});outerHalos.push({x,y:3.94,z,rx:Math.PI/2,sx:.87,sy:.87,sz:.87});
       if(i===1)wrapAdColumn(x,z,'blue');if(i===5)wrapAdColumn(x,z,'green');
     }
@@ -260,7 +265,45 @@
     hangingRingSign('↑ 14号口    → 15—20',8.2,4.4,.8,4.3);
     hangingRingSign('← 21—23   ↑ 24—27',4.7,-6.45,.55,4.1);
     for(const x of [-5.6,-4.7]){box(outerRing,x,3.29,-5.55,.6,1.25,.025,mat('#c7192a',.85),false);box(outerRing,x-.13,3.55,-5.53,.07,.07,.035,mat('#e9c84a'),false);}
+    // Close the original sketch's exposed perimeter without introducing routes.
+    // The shell follows the union of its existing slabs and the ring footprint.
+    const shellMat=StationSurfaces.finish(THREE,'#dfded3','panel',.57);
+    const inLegacyRect=(x,z)=>legacyFloors.some(f=>Math.abs(x-f.x)<f.w/2&&Math.abs(z-f.z)<f.d/2);
+    const inRing=(x,z)=>x*x/(11.5*11.5)+z*z/(8.855*8.855)<1;
+    const shellBox=(x,z,w,d,angle=0)=>{const m=box(level1,x,2.16,z,w,4.08,d,shellMat,true);m.rotation.y=angle;m.userData.cutaway=true;};
+    const sx=[...new Set(legacyFloors.flatMap(f=>[f.x-f.w/2,f.x+f.w/2]))].sort((a,b)=>a-b);
+    const sz=[...new Set(legacyFloors.flatMap(f=>[f.z-f.d/2,f.z+f.d/2]))].sort((a,b)=>a-b);
+    for(const z of sz){const ext=11.5*Math.sqrt(Math.max(0,1-z*z/(8.855*8.855))),cuts=[...sx,-ext,ext].sort((a,b)=>a-b);
+      for(let i=1;i<cuts.length;i++){const x=(cuts[i-1]+cuts[i])/2,a=inLegacyRect(x,z-.001),c=inLegacyRect(x,z+.001);if(a!==c&&!inRing(x,z)&&cuts[i]-cuts[i-1]>.001)shellBox(x,z+(a?.09:-.09),cuts[i]-cuts[i-1],.18);}}
+    for(const x of sx){const ext=8.855*Math.sqrt(Math.max(0,1-x*x/(11.5*11.5))),cuts=[...sz,-ext,ext].sort((a,b)=>a-b);
+      for(let i=1;i<cuts.length;i++){const z=(cuts[i-1]+cuts[i])/2,a=inLegacyRect(x-.001,z),c=inLegacyRect(x+.001,z);if(a!==c&&!inRing(x,z)&&cuts[i]-cuts[i-1]>.001)shellBox(x+(a?.09:-.09),z,.18,cuts[i]-cuts[i-1]);}}
+    for(let i=0;i<128;i++){const a=i*Math.PI/64,b=(i+1)*Math.PI/64,x1=11.5*Math.cos(a),z1=8.855*Math.sin(a),x2=11.5*Math.cos(b),z2=8.855*Math.sin(b),x=(x1+x2)/2,z=(z1+z2)/2;
+      if(inLegacyRect(x,z)||(z>=7&&Math.abs(x)<3.6))continue;shellBox(x,z,Math.hypot(x2-x1,z2-z1)+.015,.14,-Math.atan2(z2-z1,x2-x1));}
+    for(const f of legacyFloors){const roof=box(level1,f.x,4.27,f.z,f.w,.14,f.d,mat('#dddcd4',.82));roof.userData.cutaway=true;}
     const stationDetails=StationDetails.build({THREE,parent:level1,outerRing,pierSpecs,facades:detailFacades});
+    // Capture existing solid furniture before instancing removes its transforms.
+    level1.updateMatrixWorld(true);
+    level1.traverse(o=>{if(!o.isMesh||o.geometry!==unitBoxGeometry||o.userData.planSurface||o.scale.y<.3)return;
+      for(let p=o;p;p=p.parent)if(p.userData.mapOnly)return;
+      const position=o.getWorldPosition(new THREE.Vector3());if(position.y-o.scale.y/2>2.1||position.y+o.scale.y/2<.3)return;
+      const e=o.matrixWorld.elements;legacyColliders.push({x:position.x,z:position.z,w:o.scale.x,d:o.scale.z,angle:Math.atan2(e[8],e[10])});
+    });
+    // A bounded pool lights the nearby ceiling fittings; only six lights are
+    // active, independent of the number of fixtures along the station.
+    const lightAnchors=[];
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;lightAnchors.push([7*Math.cos(a),3.72,-5.3*Math.sin(a)]);}
+    for(let z=9;z<=51;z+=7)lightAnchors.push([0,3.2,-z]);
+    for(let x=-28;x<=43;x+=7)lightAnchors.push([x,3.8,-1]);
+    for(let z=-12;z>=-33;z-=7)lightAnchors.push([z<-20?-4:0,3.8,-z]);
+    for(const [x,z] of [[8,13.5],[15,13.5],[7.4,21],[-9,30],[-15.5,30],[8,30],[17,34.5],[24,34.5],[17,26],[24,26],[19,22]])lightAnchors.push([x,3.15,-z]);
+    for(const [x,y,z] of lightAnchors){if(y<3.75)continue;const fitting=box(level1,x,y+.1,-z,1.8,.045,.16,ringLight);fitting.userData.cutaway=true;const backing=box(level1,x,y+.14,-z,1.9,.05,.22,steel);backing.userData.cutaway=true;}
+    const localLights=Array.from({length:6},()=>{const l=new THREE.PointLight('#fff0d6',0,13,2);scene.add(l);return l;});
+    let lightElapsed=1;
+    function updateInteriorLights(dt,force=false){lightElapsed+=dt;if(!force&&lightElapsed<.3)return;lightElapsed=0;
+      ambient.intensity=walking?.64:1;keyLight.intensity=walking?.22:1.45;fill.intensity=walking?.18:.72;
+      const nearest=lightAnchors.map(p=>({p,d:Math.hypot(camera.position.x-p[0],camera.position.z-p[2])})).sort((a,b)=>a.d-b.d);
+      localLights.forEach((l,i)=>{const a=nearest[i];l.position.set(...a.p);l.intensity=walking?1.45:0;});
+    }
     label(level1,'站厅 / 换乘',0,0,{scale:1.12});
     label(level1,'6–11 出口通道',0,25,{scale:.85});
     label(level1,'卫生间',19,21.2,{scale:.7});
@@ -292,10 +335,10 @@
     // Batch the original static box fittings as well as the new detail builder.
     function batchLegacyBoxes(level){
       level.updateMatrixWorld(true);const sets=new Map(),remove=[];
-      level.traverse(o=>{if(!o.isMesh||o.geometry!==unitBoxGeometry)return;let mapOnly=false;for(let p=o;p&&p!==level;p=p.parent)if(p.userData.mapOnly)mapOnly=true;
-        const k=o.material.uuid+':'+mapOnly;if(!sets.has(k))sets.set(k,{material:o.material,mapOnly,items:[]});sets.get(k).items.push(o.matrixWorld.clone());remove.push(o);});
+      level.traverse(o=>{if(!o.isMesh||o.geometry!==unitBoxGeometry)return;let mapOnly=false,cutaway=false;for(let p=o;p&&p!==level;p=p.parent){if(p.userData.mapOnly)mapOnly=true;if(p.userData.cutaway)cutaway=true;}
+        const k=o.material.uuid+':'+mapOnly+':'+cutaway;if(!sets.has(k))sets.set(k,{material:o.material,mapOnly,cutaway,items:[]});sets.get(k).items.push(o.matrixWorld.clone());remove.push(o);});
       remove.forEach(o=>o.parent.remove(o));
-      for(const s of sets.values()){const m=new THREE.InstancedMesh(unitBoxGeometry,s.material,s.items.length);s.items.forEach((q,i)=>m.setMatrixAt(i,q));m.receiveShadow=true;m.userData.mapOnly=s.mapOnly;m.frustumCulled=false;level.add(m);}
+      for(const s of sets.values()){const m=new THREE.InstancedMesh(unitBoxGeometry,s.material,s.items.length);s.items.forEach((q,i)=>m.setMatrixAt(i,q));m.receiveShadow=true;m.userData.mapOnly=s.mapOnly;m.userData.cutaway=s.cutaway;m.visible=!s.cutaway;m.frustumCulled=false;level.add(m);}
     }
     batchLegacyBoxes(level1);batchLegacyBoxes(level2);
     // Drawing coordinates point up along +v. Three.js forward is -Z: reflect v
@@ -312,19 +355,20 @@
     function isWalkable(x,z){
       const u=x/hallScale,v=-z/hallScale;
       if(v>=7.5)return stationDetails.northWalkable(u,v);
-      const hub=u*u/(6.85*6.85)+v*v/(5.05*5.05)<=1;
-      const outerLane=u*u/(10.3*10.3)+v*v/(8.0*8.0)<=1;
-      const main=(u>=-31&&u<=44.8&&v>=-.95&&v<=3.0);
-      const south=(Math.abs(u)<=3.25&&v>=-20.5&&v<=.5)||(u>=-7.8&&u<=1&&v>=-29&&v<=-15.5)||(u>=-8&&u<=0&&v>=-35.5&&v<=-26);
-      if(!(hub||outerLane||main||south)||stationDetails.blocked(u,v))return false;
+      const onFloor=(x,z)=>x*x/(10.3*10.3)+z*z/(7.97*7.97)<=1||legacyFloors.some(f=>Math.abs(x-f.x)<=f.w/2&&Math.abs(z-f.z)<=f.d/2);
+      if(!onFloor(u,v)||stationDetails.blocked(u,v))return false;
+      for(let i=0;i<12;i++){const a=i*Math.PI/6;if(!onFloor(u+.28*Math.cos(a),v+.28*Math.sin(a))&&v+.28*Math.sin(a)<7.5)return false;}
+      for(const c of legacyColliders){const dx=u-c.x,dz=v-c.z,co=Math.cos(c.angle),si=Math.sin(c.angle);if(Math.abs(co*dx-si*dz)<c.w/2+.28&&Math.abs(si*dx+co*dz)<c.d/2+.28)return false;}
       for(const [px,pz] of pierSpecs)if(Math.hypot(u-px,v-pz)<.93)return false;
       for(const [px,pz] of outerPierSpecs)if(Math.hypot(u-px,v-pz)<1.08)return false;
       return true;
     }
     let cutaway=true;
     function refreshDetailVisibility(){
-      level1.traverse(o=>{if(o.userData.mapOnly)o.visible=!walking;});
+      level1.traverse(o=>{if(o.userData.mapOnly)o.visible=!walking;if(o.userData.cutaway)o.visible=walking||!cutaway;});
+      rotundaRoof.visible=walking||!cutaway;
       stationDetails.setWalkMode(walking,cutaway);
+      updateInteriorLights(0,true);
       document.querySelector('.grain').style.display=walking?'none':'';
     }
     function setWalkLook(){camera.rotation.order='YXZ';camera.rotation.set(walkPitch,walkYaw+Math.PI,0,'YXZ');}
@@ -358,7 +402,7 @@
       const forwardX=Math.sin(walkYaw),forwardZ=Math.cos(walkYaw),rightX=-Math.cos(walkYaw),rightZ=Math.sin(walkYaw);
       let dx=0,dz=0;if(held.has('w')||held.has('arrowup')){dx+=forwardX;dz+=forwardZ;}if(held.has('s')||held.has('arrowdown')){dx-=forwardX;dz-=forwardZ;}
       if(held.has('d')||held.has('arrowright')){dx+=rightX;dz+=rightZ;}if(held.has('a')||held.has('arrowleft')){dx-=rightX;dz-=rightZ;}
-      const mag=Math.hypot(dx,dz);if(mag){const speed=(held.has('shift')?3.4:1.5)*hallScale;dx=dx/mag*speed*dt;dz=dz/mag*speed*dt;if(isWalkable(walkX+dx,walkZ))walkX+=dx;if(isWalkable(walkX,walkZ+dz))walkZ+=dz;}
+      const mag=Math.hypot(dx,dz);if(mag){const speed=(held.has('shift')?3.4:1.5)*hallScale;dx=dx/mag*speed*dt;dz=dz/mag*speed*dt;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.08));for(let i=0;i<steps;i++){if(isWalkable(walkX+dx/steps,walkZ))walkX+=dx/steps;if(isWalkable(walkX,walkZ+dz/steps))walkZ+=dz/steps;}}
       camera.position.set(walkX,StationDetails.layout.eyeHeight+.12,walkZ);setWalkLook();
     }
     renderer.domElement.addEventListener('pointerdown',ev=>{if(walking&&document.pointerLockElement!==renderer.domElement){dragLook=true;dragX=ev.clientX;dragY=ev.clientY;}});
@@ -385,8 +429,9 @@
     const perf=document.querySelector('#performance');
     function updatePerf(now){perfFrames++;if(now-perfStart>1000){perf.textContent=Math.round(perfFrames*1000/(now-perfStart))+' FPS · '+renderer.info.render.calls+' 绘制';perfFrames=0;perfStart=now;}}
     // Read-only diagnostics used by the local acceptance script.
-    window.stationViewer={details:stationDetails,isWalkable,nearestWalkPoint,scene,renderer,get camera(){return camera;}};
-    const clock=new THREE.Clock();let lastFrame=0;function animate(now){requestAnimationFrame(animate);if(now-lastFrame<15)return;lastFrame=now;const dt=Math.min(clock.getDelta(),.05);if(walking)updateWalk(dt);else{controls.update();updateCompass();}renderer.render(scene,camera);updatePerf(now,dt);}requestAnimationFrame(animate);
+    window.stationViewer={details:stationDetails,isWalkable,nearestWalkPoint,scene,renderer,legacyColliders,localLights,pierSpecs,outerPierSpecs,get camera(){return camera;}};
+    rotundaRoof.visible=false;
+    const clock=new THREE.Clock();let lastFrame=0;function animate(now){requestAnimationFrame(animate);if(now-lastFrame<15)return;lastFrame=now;const dt=Math.min(clock.getDelta(),.05);if(walking)updateWalk(dt);else{controls.update();updateCompass();}updateInteriorLights(dt);renderer.render(scene,camera);updatePerf(now,dt);}requestAnimationFrame(animate);
   </script>
 </body>
 </html>

@@ -21,6 +21,9 @@
       {id:'进站前区',x:7.4,z:21,w:8.2,d:7.4},
       {id:'卫生间对侧前厅',x:19,z:21.2,w:8,d:7},
       {id:'卫生间接廊',x:19,z:25.15,w:4.2,d:1.5},
+      {id:'6楼梯门厅',x:-15.5,z:31.5,w:4.1,d:5.6},
+      {id:'11A楼梯门厅',x:26.5,z:34.5,w:5.7,d:4.1},
+      {id:'11B楼梯门厅',x:26.5,z:26,w:5.7,d:4.1},
       {id:'7支路',x:-5.3,z:36,w:4.6,d:2.8},
       {id:'8支路',x:-5.3,z:43,w:4.6,d:2.8},
       {id:'9支路',x:-4.9,z:50,w:3.8,d:2.8},
@@ -53,8 +56,9 @@
     function cyl(g,x,y,z,r,h,color,solid=false) {const m=new T.Mesh(cylinder,typeof color==='string'?material(color):color);m.position.set(x,y,z);m.scale.set(r,h,r);g.add(m);if(solid)obstacle(g,x,z,r*2,r*2);return m;}
     function torus(g,x,y,z,r,t,color) {const m=new T.Mesh(new T.TorusGeometry(r,t,8,48),typeof color==='string'?material(color,0,true):color);m.rotation.x=Math.PI/2;m.position.set(x,y,z);g.add(m);return m;}
     function wall(g,x,z,w,d,color='#e7e6dc') {
-      b(g,x,.64,z,w,1.08,d,color,true);
-      const upper=b(g,x,2.24,z,w,2.12,d,color);upper.userData.cutaway=true;
+      const cladding=global.StationSurfaces.finish(T,color,'panel',.5);
+      b(g,x,.64,z,w,1.08,d,cladding,true);
+      const upper=b(g,x,2.24,z,w,2.12,d,cladding);upper.userData.cutaway=true;
       b(g,x,.18,z,w+.015,.18,d+.015,'#343939');
       for(let h=1.12;h<3.2;h+=.7)b(g,x,h,z,w+.009,.011,d+.009,'#c3c5c0');
     }
@@ -83,12 +87,12 @@
       const s=group('灯箱 '+text,x,z,yaw,g);b(s,0,y,-.035,w+.1,h+.1,.12,'#293236');sign(s,text,0,y,.035,w,h,bg,fg,0,theme);return s;
     }
     function map(g,x,z,yaw=0,w=2.4) {return screen(g,'三阳广场站街区图\n出口导向',x,1.7,z,w,1.55,'#eef0e9','#263c44',yaw,'map');}
-    function floor(g,x,z,w,d,color='#bfc3bc') {b(g,x,.06,z,w,.12,d,color);}
+    function floor(g,x,z,w,d,color='#bfc3bc') {b(g,x,.06,z,w,.12,d,global.StationSurfaces.finish(T,color,'stone',.46));}
     function tactile(g,x,z,w,d) {b(g,x,.128,z,w,.028,d,'#c5bca1');const vertical=d>w;for(let i=-1;i<=1;i++)b(g,x+(vertical?i*.06:0),.147,z+(vertical?0:i*.06),vertical?.025:w,.012,vertical?d:.025,'#eee4c9',false,.2);}
-    function ceiling(x,z,w,d) {
-      b(ceilings,x,3.57,z,w,.09,d,'#242b2e');
-      for(let xx=Math.ceil((x-w/2+.04)/.24)*.24;xx<x+w/2-.04;xx+=.24)b(ceilings,xx,3.46,z,.055,.18,d,'#8d9694',false,.3);
-      for(let zz=Math.ceil((z-d/2+.07)/3.1)*3.1;zz<z+d/2-.07;zz+=3.1)b(ceilings,x,3.35,zz,w-.15,.055,.12,material('#fff8df',0,true));
+    function ceiling(x,z,w,d,height=3.57) {
+      b(ceilings,x,height,z,w,.09,d,'#242b2e');
+      for(let xx=Math.ceil((x-w/2+.04)/.24)*.24;xx<x+w/2-.04;xx+=.24)b(ceilings,xx,height-.11,z,.055,.18,d,'#8d9694',false,.3);
+      for(let zz=Math.ceil((z-d/2+.07)/3.1)*3.1;zz<z+d/2-.07;zz+=3.1)b(ceilings,x,height-.22,zz,Math.max(.04,w-.06),.055,.12,material('#fff8df',0,true));
     }
     function safety(g,x,z) {
       b(g,x,.54,z,.55,.95,.2,'#b82935',true);sign(g,'消火栓',x,.68,z+.11,.48,.23,'#b82935','#ffffff');
@@ -116,7 +120,8 @@
       obstacle(s,0,0,w+.4,run);return s;
     }
     function portal(g,n,x,z,yaw=0,dual=false) {
-      const p=group('出口 '+n,x,z,yaw,g);wall(p,-2.15,1.4,.28,5);wall(p,2.15,1.4,.28,5);
+      const p=group('出口 '+n,x,z,yaw,g);
+      if(n!=='6'&&!n.startsWith('11')){wall(p,-2.15,1.4,.28,5);wall(p,2.15,1.4,.28,5);}
       b(p,-1.84,1.7,-.3,.45,3.2,.25,'#d89320');sign(p,n,-1.83,1.85,-.45,.4,.65,'#d89320','#ffeb56',Math.PI);
       stairs(p,-.7,2.4,1.45,3.8,1.7,0,false,n==='2');stairs(p,.95,2.4,.95,3.8,1.7,0,true);
       board(p,'站厅 / 返回 ↓','↑ '+n+' 出口',0,-.15,3.9);sign(p,'安全出口',0,3.27,-.07,1,.2,'#1a5744','#9effbd',Math.PI);
@@ -127,31 +132,50 @@
     // Render a disjoint union: overlapping navigation rectangles must not produce
     // coplanar floor/ceiling faces at the cross-junction or restroom threshold.
     const rows=[...new Set(floors.flatMap(f=>[f.z-f.d/2,f.z+f.d/2]))].sort((a,b)=>a-b);
+    const stairBays=floors.filter(f=>f.id.includes('楼梯门厅'));
+    const inStairBay=(x,z)=>stairBays.some(f=>Math.abs(x-f.x)<=f.w/2+.2&&Math.abs(z-f.z)<=f.d/2+.2);
     for(let i=1;i<rows.length;i++){
       const lo=rows[i-1],hi=rows[i],mid=(lo+hi)/2;
       const spans=floors.filter(f=>mid>f.z-f.d/2&&mid<f.z+f.d/2).map(f=>[f.x-f.w/2,f.x+f.w/2]).sort((a,b)=>a[0]-b[0]);
       const merged=[];for(const span of spans){const last=merged[merged.length-1];if(last&&span[0]<=last[1])last[1]=Math.max(last[1],span[1]);else merged.push(span.slice());}
-      for(const [left,right] of merged){floor(root,(left+right)/2,mid,right-left,hi-lo);ceiling((left+right)/2,mid,right-left,hi-lo);}
+      for(const [left,right] of merged){
+        floor(root,(left+right)/2,mid,right-left,hi-lo);
+        const cuts=[left,right,...stairBays.flatMap(f=>[f.x-f.w/2,f.x+f.w/2]).filter(x=>x>left&&x<right)].sort((a,b)=>a-b);
+        for(let k=1;k<cuts.length;k++){const x=(cuts[k-1]+cuts[k])/2,w=cuts[k]-cuts[k-1];if(w>.001)ceiling(x,mid,w,hi-lo,inStairBay(x,mid)?5.25:3.57);}
+      }
     }
     for(let z=8;z<52;z+=1.5)b(root,0,.126,z,6.4,.006,.012,'#89948f');
     for(let x=-3;x<=3;x+=1.5)b(root,x,.126,29.5,.012,.006,44,'#89948f');
     tactile(root,-.5,29.2,.24,43.5);tactile(root,-.5,30,35,.24);
-    const openings={left:[[26.9,33.1],[34.6,37.4],[41.6,44.4],[48.6,51.4]],right:[[8.9,24.7],[26.6,33.4],[47.6,50.4]]};
-    for(const [side,key] of [[-1,'left'],[1,'right']]){let start=7.5;for(const [lo,hi] of [...openings[key],[52.5,52.5]]){if(lo>start)wall(root,side*3.4,(start+lo)/2,.2,lo-start);start=hi;}}
-    wall(root,0,52.6,6.8,.2);
+    // Derive the exterior shell from the exact floor union. Shared room edges
+    // stay open; only exposed edges receive a wall, outside the clear floor.
+    const boundary=[];
+    const xs=[...new Set(floors.flatMap(f=>[f.x-f.w/2,f.x+f.w/2]))].sort((a,b)=>a-b);
+    function inside(x,z){return floors.some(f=>Math.abs(x-f.x)<f.w/2&&Math.abs(z-f.z)<f.d/2);}
+    for(const z of rows)for(let i=1;i<xs.length;i++){
+      const x=(xs[i-1]+xs[i])/2,a=inside(x,z-.001),beyond=inside(x,z+.001);
+      if(a!==beyond&&!(Math.abs(z-7)<.001&&Math.abs(x)<3.31))boundary.push({x,z:z+(a?.09:-.09),w:xs[i]-xs[i-1],d:.18});
+    }
+    for(const x of xs)for(let i=1;i<rows.length;i++){
+      const z=(rows[i-1]+rows[i])/2,a=inside(x-.001,z),beyond=inside(x+.001,z);
+      if(a!==beyond)boundary.push({x:x+(a?.09:-.09),z,w:.18,d:rows[i]-rows[i-1]});
+    }
+    boundary.forEach(e=>{wall(root,e.x,e.z,e.w,e.d);if(inStairBay(e.x,e.z)){const upper=b(root,e.x,4.2,e.z,e.w,1.86,e.d,'#e7e6dc');upper.userData.cutaway=true;}});
+    // Vertical soffit returns close the step between the low corridor ceiling
+    // and the taller stairwell so neither opens into the scene background.
+    for(const f of stairBays){
+      for(const side of [-1,1]){
+        b(ceilings,f.x+side*f.w/2,4.39,f.z,.1,1.76,f.d,'#dadbd2');
+        b(ceilings,f.x,4.39,f.z+side*f.d/2,f.w,1.76,.1,'#dadbd2');
+      }
+    }
     // Blue advertisements along the left approach; no board is placed across an opening.
     for(const z of [10.5,15.5,20.5,24.5]){
       const a=group('蓝色广告墙',-3.28,z,Math.PI/2);b(a,0,1.8,0,3.8,3.25,.04,'#008db7');screen(a,'无锡 · 城市生活\n文明出行  一路相伴',0,1.85,.055,2.7,1.55,'#127eb1');
     }
     // The west arm ends at 6; a continuous wall separates it from the 7 spur.
-    wall(root,-7.9,33.22,9.0,.2);wall(root,-16.2,34.35,6.3,.2);
-    wall(root,-19.4,30,.2,6.4);
     // 11 first crosses a glazed common vestibule, then turns into separate
     // north/left (A) and south/right (B) corridors. No cross-wall shortcut.
-    wall(root,18.7,30,16.9,.2);
-    wall(root,18.7,36.28,17.2,.18);
-    wall(root,13.25,23.62,6.3,.18);wall(root,24.45,23.62,5.7,.18);
-    wall(root,29.15,34.5,.18,3.6);wall(root,29.15,26,.18,3.6);
     for(const v of [28.1,31.9]){
       b(root,5.4,1.6,v,.065,2.9,2.1,glass,true);
       b(root,5.4,3.08,v,.09,.08,2.2,'#899b9b',false,.7);
@@ -160,7 +184,7 @@
     board(root,'↑ 11 出口  /  前厅','↓ 圆环站厅',4.85,30,3.3,Math.PI/2);
     for(const [n,[x,z]] of Object.entries(layout.exits)){
       if(n==='6'||n.startsWith('11'))continue;
-      const side=x<0?-1:1;wall(root,side*5.5,z-1.48,4.4,.16);wall(root,side*5.5,z+1.48,4.4,.16);
+      const side=x<0?-1:1;
       board(root,`出口 ${n} ${side<0?'←':'→'}`,`${side<0?'→':'←'} 出口 ${n}`,0,z,3.2);
       const end=group('出口 '+n,side*6.7,z,side<0?Math.PI/2:-Math.PI/2);sign(end,n,0,1.8,0,1.1,.9,'#d28d21','#fff266');b(end,0,1.65,-.13,2.4,3.1,.2,'#d28d21',true);
     }
@@ -170,7 +194,7 @@
     portal(root,'11A',24.5,34.5,Math.PI/2);
     portal(root,'11B',24.5,26,Math.PI/2);
     board(root,'11A ← 左侧出口     11B → 右侧出口','返回圆环 ←',10.3,30,5.4,Math.PI/2);
-    const coffee=group('11出口左侧咖啡店',8.2,35.98,Math.PI);
+    const coffee=group('11出口左侧咖啡店',7.5,33.04,Math.PI);
     b(coffee,0,1.55,0,4.8,2.9,.08,glass,true);
     b(coffee,0,3.14,-.07,5.1,.43,.2,'#6b6251');
     sign(coffee,'星巴克咖啡',0,3.14,.045,4.8,.34,'#6b6251','#f5f2e8');
@@ -182,7 +206,6 @@
     // The supermarket sits at the far end of a deep side passage; the first
     // metres remain an open spur with a glass rail and a recessed dark bay.
     const shop=group('右侧外展超市及纵深岔路',3.4,13.2,Math.PI/2);
-    wall(shop,-4.3,11.7,.18,7.2);wall(shop,4.3,7.65,.18,15.3);wall(shop,0,15.3,8.6,.18);
     for(let s=0.9;s<7.2;s+=1.55){
       b(shop,-3.66,1.0,s,.045,1.8,1.45,glass,true);
       b(shop,-3.66,1.93,s,.07,.05,1.48,'#a7b6b6',false,.7);
@@ -203,7 +226,6 @@
     // The entry mouth faces back toward the ring, along the main passage.
     const entry=group('面向圆环的安检与进站口',7.4,17.3);
     wall(entry,-4.1,1.1,.18,2.2);wall(entry,-4.1,6.3,.18,2.2);
-    wall(entry,4.1,3.7,.18,7.4);wall(entry,0,7.4,8.2,.18);
     b(entry,0,3.08,.04,7.9,.38,.18,'#b8a580');
     sign(entry,'安检进站  1号线 / 2号线',0,3.08,-.07,7.5,.31,'#172126','#ffdc4d',Math.PI);
     for(const x of [-1.05,1.05]){
@@ -220,8 +242,6 @@
     // Opposite the 11 exits, the WC opens south from the B-side passage.
     // Its public front is layered glass, warm perforated panels and a lit cove.
     const wc=group('11出口对侧卫生间前厅与洗手区',19,21.2);
-    wall(wc,-4,0,.18,7);wall(wc,4,0,.18,7);wall(wc,0,-3.5,8,.18);
-    wall(wc,-3.12,3.5,1.75,.18);wall(wc,3.12,3.5,1.75,.18);
     // Exterior is a bright, layered portal: white stone surround, red accent,
     // warm perforated side panels, and paired sliding glass leaves.
     b(wc,0,3.12,3.61,4.72,.2,.3,'#f4f0e7');
@@ -240,24 +260,24 @@
     const perforatedMap=new T.CanvasTexture(perforated);perforatedMap.encoding=T.sRGBEncoding;perforatedMap.anisotropy=4;
     const perforatedMat=new T.MeshStandardMaterial({map:perforatedMap,color:'#fff3d4',roughness:.46,metalness:.18,emissive:'#6b4b1d',emissiveIntensity:.22});
     for(const x of [-3.2,3.2]){
-      const panel=new T.Mesh(new T.PlaneGeometry(1.52,2.72),perforatedMat);panel.position.set(x,1.55,3.58);wc.add(panel);
-      b(wc,x-.8,1.55,3.63,.07,2.88,.12,'#d5c5a2');b(wc,x+.8,1.55,3.63,.07,2.88,.12,'#d5c5a2');
+      const panel=new T.Mesh(new T.PlaneGeometry(1.52,2.72),perforatedMat);panel.position.set(x,1.55,3.72);wc.add(panel);
+      b(wc,x-.8,1.55,3.73,.07,2.88,.08,'#d5c5a2');b(wc,x+.8,1.55,3.73,.07,2.88,.08,'#d5c5a2');
     }
     b(wc,0,3.17,3.52,7.9,.37,.24,'#e3dacb');
     sign(wc,'卫生间  TOILET',0,3.18,3.66,4.8,.31,'#e3dacb','#54472b');
     sign(wc,'男 MEN       女 WOMEN',0,2.61,3.61,4.1,.27,'#c1a66f','#fff8df');
     // Door glazing, slim mullions, pull bars and the illuminated threshold.
     for(const x of [-1.5,1.5]){
-      b(wc,x,1.42,3.59,1.15,2.58,.045,glass,false,.15);
+      b(wc,x,1.42,3.59,1.15,2.58,.045,glass,true,.15);
       b(wc,x-.575,1.42,3.625,.035,2.58,.045,'#a9b5b2',false,.7);
       b(wc,x+.575,1.42,3.625,.035,2.58,.045,'#a9b5b2',false,.7);
       b(wc,x+(x<0?.42:-.42),1.25,3.66,.035,.68,.045,'#d8e3e0',false,.8);
     }
-    b(wc,0,.14,3.7,4.55,.055,.46,'#969c99');
-    b(wc,0,.177,3.7,4.2,.012,.34,material('#c3b57e',0,true));
+    b(wc,0,.123,3.7,4.2,.006,.46,'#969c99');
+    b(wc,0,.132,3.7,4.1,.012,.34,'#c3b57e');
     // Three stacked sign bands make the frontage legible from the passage.
-    sign(wc,'男厕  MEN',-3.2,2.84,3.67,1.28,.28,'#304f67','#fff4d8');
-    sign(wc,'女厕  WOMEN',3.2,2.84,3.67,1.46,.28,'#8c4057','#fff4d8');
+    sign(wc,'男厕  MEN',3.2,2.84,3.82,1.28,.28,'#304f67','#fff4d8');
+    sign(wc,'女厕  WOMEN',-3.2,2.84,3.82,1.46,.28,'#8c4057','#fff4d8');
     torus(wc,0,3.27,1.5,1.48,.1,'#eaf5ff');
     cyl(wc,0,3.39,1.5,1.78,.055,'#e4d8bd');
     for(let i=0;i<=30;i++){
@@ -352,10 +372,10 @@
     batchBoxes();
     function inFloor(x,z){return floors.some(f=>Math.abs(x-f.x)<=f.w/2&&Math.abs(z-f.z)<=f.d/2);}
     function blocked(x,z,r=layout.radius){return colliders.some(c=>{const dx=x-c.x,dz=z-c.z,co=Math.cos(c.angle),si=Math.sin(c.angle);const u=co*dx-si*dz,v=si*dx+co*dz;return Math.abs(u)<c.w/2+r&&Math.abs(v)<c.d/2+r;});}
-    function northWalkable(x,z){if(!inFloor(x,z)||blocked(x,z))return false;for(const [dx,dz] of [[.28,0],[-.28,0],[0,.28],[0,-.28]])if(z+dz>=7.5&&!inFloor(x+dx,z+dz))return false;return true;}
+    function northWalkable(x,z){if(!inFloor(x,z)||blocked(x,z))return false;for(let i=0;i<12;i++){const a=i*Math.PI/6,dx=layout.radius*Math.cos(a),dz=layout.radius*Math.sin(a);if(z+dz>=7.5&&!inFloor(x+dx,z+dz))return false;}return true;}
     function setWalkMode(walk,cut=true){root.traverse(o=>{if(o.userData.cutaway)o.visible=walk||!cut;});}
     setWalkMode(false);
-    return {root,layout,colliders,signs,textures,floors,northWalkable,blocked,setWalkMode};
+    return {root,layout,colliders,signs,textures,floors,boundary,northWalkable,blocked,setWalkMode};
   }
   global.StationDetails={layout,build};
 })(typeof window!=='undefined'?window:globalThis);
