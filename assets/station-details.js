@@ -1,27 +1,26 @@
 /* Local classic script: photo-derived fittings, shared floor/collision layout.
- * Coordinates are approximate metres. +v runs from the ring toward exits 6–11.
+ * Coordinates are approximate metres. Local +Z runs from the ring toward exits 6–11.
  * Source/uncertainty index: docs/素材与设施索引.md. No remote textures required. */
 (function (global) {
   'use strict';
   const layout = {
     eyeHeight: 1.65, radius: .28,
-    shop: {x: 10.5, z: 13.2, w: 16.4, d: 8.5},
-    entry: {x: -12, z: 20.5, w: 8.2, d: 8.2},
+    shop: {x: 11, z: 13.2, w: 15.4, d: 8.6},
+    entry: {x: 7.4, z: 21, w: 8.2, d: 7.4},
     cross: {x: -.5, z: 30, w: 38, d: 6.2},
-    toilet: {x: 10, z: 21.4, w: 8, d: 7},
-    exits: {'6': [-16.5,30], '7': [-5,36], '8': [-5,43], '9': [-4,50], '10': [4,49], '11A': [20.5,34], '11B': [20.5,26]},
-    focus: {ring: [0,6.3], corridor: [0,18], toilet: [10,22]},
+    toilet: {x: 19, z: 21.2, w: 8, d: 7},
+    exits: {'6': [-15.5,31.5], '7': [-5,36], '8': [-5,43], '9': [-4,50], '10': [4,49], '11A': [24.5,34.5], '11B': [24.5,26]},
+    focus: {ring: [0,6.3], corridor: [0,18], toilet: [19,24]},
     floors: [
       {id:'主廊',x:0,z:29.75,w:6.6,d:45.5},
       {id:'十字廊',x:-.5,z:30,w:38,d:6.2},
-      {id:'11共同前厅',x:6.5,z:30,w:12,d:6},
-      {id:'11A左侧分支',x:17.5,z:34,w:21,d:3.2},
-      {id:'11B右侧分支',x:17.5,z:26,w:21,d:3.2},
-      {id:'11B卫生间接廊',x:10,z:25.1,w:4.2,d:1.3},
-      {id:'超市外展通道',x:10.5,z:13.2,w:16.4,d:8.5},
-      {id:'进站前厅',x:-12,z:20.5,w:8.2,d:8.2},
-      {id:'进站连接廊',x:-5.55,z:20.5,w:5,d:7},
-      {id:'卫生间对侧洗手区',x:10,z:21.4,w:8,d:7},
+      {id:'11共同前厅',x:7.9,z:30,w:9.2,d:6.2},
+      {id:'11A左分支',x:18.6,z:34.5,w:17.2,d:3.4},
+      {id:'11B右分支',x:18.6,z:26,w:17.2,d:3.4},
+      {id:'超市深岔路',x:11,z:13.2,w:15.4,d:8.6},
+      {id:'进站前区',x:7.4,z:21,w:8.2,d:7.4},
+      {id:'卫生间对侧前厅',x:19,z:21.2,w:8,d:7},
+      {id:'卫生间接廊',x:19,z:25.15,w:4.2,d:1.5},
       {id:'7支路',x:-5.3,z:36,w:4.6,d:2.8},
       {id:'8支路',x:-5.3,z:43,w:4.6,d:2.8},
       {id:'9支路',x:-4.9,z:50,w:3.8,d:2.8},
@@ -118,9 +117,9 @@
     }
     function portal(g,n,x,z,yaw=0,dual=false) {
       const p=group('出口 '+n,x,z,yaw,g);wall(p,-2.15,1.4,.28,5);wall(p,2.15,1.4,.28,5);
-      b(p,-1.84,1.7,-.3,.45,3.2,.25,'#d89320');sign(p,n,-1.83,1.85,-.16,.4,.65,'#d89320','#ffeb56');
+      b(p,-1.84,1.7,-.3,.45,3.2,.25,'#d89320');sign(p,n,-1.83,1.85,-.45,.4,.65,'#d89320','#ffeb56',Math.PI);
       stairs(p,-.7,2.4,1.45,3.8,1.7,0,false,n==='2');stairs(p,.95,2.4,.95,3.8,1.7,0,true);
-      board(p,'↑ '+n+' 出口','站厅 / 返回 ↓',0,-.15,3.9);sign(p,'安全出口',0,3.27,-.07,1,.2,'#1a5744','#9effbd');
+      board(p,'站厅 / 返回 ↓','↑ '+n+' 出口',0,-.15,3.9);sign(p,'安全出口',0,3.27,-.07,1,.2,'#1a5744','#9effbd',Math.PI);
       b(p,0,.139,-.8,3.5,.025,.7,'#5b6058');tactile(p,0,-1.5,3.6,.22);map(p,-1.87,-.7,Math.PI/2,1.2);barriers(p,-2.65,-.65);umbrella(p,2.45,-.6);return p;
     }
 
@@ -137,83 +136,127 @@
     for(let z=8;z<52;z+=1.5)b(root,0,.126,z,6.4,.006,.012,'#89948f');
     for(let x=-3;x<=3;x+=1.5)b(root,x,.126,29.5,.012,.006,44,'#89948f');
     tactile(root,-.5,29.2,.24,43.5);tactile(root,-.5,30,35,.24);
-    const openings={left:[[17,24],[26.9,33.1],[34.6,37.4],[41.6,44.4],[48.6,51.4]],right:[[8.8,17.6],[24.2,35.8],[47.6,50.4]]};
+    const openings={left:[[26.9,33.1],[34.6,37.4],[41.6,44.4],[48.6,51.4]],right:[[8.9,24.7],[26.6,33.4],[47.6,50.4]]};
     for(const [side,key] of [[-1,'left'],[1,'right']]){let start=7.5;for(const [lo,hi] of [...openings[key],[52.5,52.5]]){if(lo>start)wall(root,side*3.4,(start+lo)/2,.2,lo-start);start=hi;}}
     wall(root,0,52.6,6.8,.2);
     // Blue advertisements along the left approach; no board is placed across an opening.
     for(const z of [10.5,15.5,20.5,24.5]){
       const a=group('蓝色广告墙',-3.28,z,Math.PI/2);b(a,0,1.8,0,3.8,3.25,.04,'#008db7');screen(a,'无锡 · 城市生活\n文明出行  一路相伴',0,1.85,.055,2.7,1.55,'#127eb1');
     }
-    // 11 forecourt: one shared approach forks into two genuinely separate arms.
-    // In plan +v is forward; A is on the left (larger v), B on the right.
-    wall(root,11.6,35.72,15.8,.18);
-    wall(root,6.2,24.28,4.3,.18);wall(root,15.8,24.28,4.3,.18); // opening to the WC lobby
-    wall(root,14.2,30,9.4,.18); // fork divider after the shared forecourt
-    // Keep the 6 arm independent of exit 7; this partition is continuous.
-    wall(root,-11.1,33.22,15.4,.2);
+    // The west arm ends at 6; a continuous wall separates it from the 7 spur.
+    wall(root,-7.9,33.22,9.0,.2);wall(root,-16.2,34.35,6.3,.2);
     wall(root,-19.4,30,.2,6.4);
-    // Outer 11 wall has separate openings to A and B, with a solid divider between them.
-    wall(root,19,24.05,.2,.3);wall(root,19,30,.2,4.4);wall(root,19,35.95,.2,.3);
+    // 11 first crosses a glazed common vestibule, then turns into separate
+    // north/left (A) and south/right (B) corridors. No cross-wall shortcut.
+    wall(root,18.7,30,16.9,.2);
+    wall(root,18.7,36.28,17.2,.18);
+    wall(root,13.25,23.62,6.3,.18);wall(root,24.45,23.62,5.7,.18);
+    wall(root,29.15,34.5,.18,3.6);wall(root,29.15,26,.18,3.6);
+    for(const v of [28.1,31.9]){
+      b(root,5.4,1.6,v,.065,2.9,2.1,glass,true);
+      b(root,5.4,3.08,v,.09,.08,2.2,'#899b9b',false,.7);
+    }
+    b(root,5.4,3.1,30,.09,.08,2.1,'#899b9b',false,.7);
+    board(root,'↑ 11 出口  /  前厅','↓ 圆环站厅',4.85,30,3.3,Math.PI/2);
     for(const [n,[x,z]] of Object.entries(layout.exits)){
       if(n==='6'||n.startsWith('11'))continue;
       const side=x<0?-1:1;wall(root,side*5.5,z-1.48,4.4,.16);wall(root,side*5.5,z+1.48,4.4,.16);
       board(root,`出口 ${n} ${side<0?'←':'→'}`,`${side<0?'→':'←'} 出口 ${n}`,0,z,3.2);
       const end=group('出口 '+n,side*6.7,z,side<0?Math.PI/2:-Math.PI/2);sign(end,n,0,1.8,0,1.1,.9,'#d28d21','#fff266');b(end,0,1.65,-.13,2.4,3.1,.2,'#d28d21',true);
     }
-    portal(root,'6',-15.5,30,-Math.PI/2);
-    portal(root,'11A',20.5,34,Math.PI/2);
-    portal(root,'11B',20.5,26,Math.PI/2);
-    // The branch throat remains visually open so either exit can be selected at the fork.
-    board(root,'11A ← 左侧出口      11B → 右侧出口','11A ←              → 11B',12,30,5.4);
-    board(root,'6号出口 ←','圆环 ↑   6号出口 ←',-7.5,30,4.5,Math.PI);
+    portal(root,'6',-15.5,29.5,0);
+    const exit6=group('6号口上行楼梯侧墙广告',-18.5,31.4,Math.PI/2);
+    screen(exit6,'6 出口  ↑\n中山路 · 百货',0,1.7,.08,2.4,1.4,'#e8a45d','#5b4b43');
+    portal(root,'11A',24.5,34.5,Math.PI/2);
+    portal(root,'11B',24.5,26,Math.PI/2);
+    board(root,'11A ← 左侧出口     11B → 右侧出口','返回圆环 ←',10.3,30,5.4,Math.PI/2);
+    const coffee=group('11出口左侧咖啡店',8.2,35.98,Math.PI);
+    b(coffee,0,1.55,0,4.8,2.9,.08,glass,true);
+    b(coffee,0,3.14,-.07,5.1,.43,.2,'#6b6251');
+    sign(coffee,'星巴克咖啡',0,3.14,.045,4.8,.34,'#6b6251','#f5f2e8');
+    for(const x of [-2.35,2.35])b(coffee,x,1.55,.08,.08,2.9,.1,'#9a9283');
+    board(root,'← 6 出口     11A / 11B →','← 11A / 11B     6 出口 →',0,28,5.8,Math.PI);
     board(root,'↑ 7–10 出口','↓ 圆环站厅 / 1、2号线',0,33.9,4.2,Math.PI);
     board(root,'↑ 6–11 出口     卫生间','↓ 圆环 / 14–27 出口',0,8.2,5,Math.PI);
 
-    // Outward projecting supermarket, before the entry area.
-    const shop=group('右侧外展超市',10.5,13.2,Math.PI/2);
-    wall(shop,0,8.2,8.5,.18);wall(shop,-4.25,4.1,.18,8.2);wall(shop,4.25,4.1,.18,8.2);
-    // Glass shopfront faces the main passage; the central opening stays walkable.
-    for(const x of [-3.2,3.2]){b(shop,x,1.45,.02,1.9,2.7,.08,glass,true);b(shop,x,1.5,-.06,.055,2.8,.07,'#6d797a');}
-    b(shop,0,3.08,-.1,8.1,.4,.22,'#326051');sign(shop,'便利超市',0,3.08,-.22,5.6,.31,'#326051','#fff0d2');
-    // A deep aisle is visible immediately through the open front, with parallel stocked gondolas.
-    for(const xx of [-2.65,0,2.65])for(const zz of [2.1,4.5,6.8]){
-      b(shop,xx,.95,zz,.72,1.75,1.05,'#bfb9a7',true);
-      for(let row=0;row<4;row++)for(let k=0;k<4;k++)b(shop,xx-.27+k*.18,.42+row*.32,zz+.54,.13,.23,.12,['#d15d42','#ddb747','#5d9d8a','#77aaca'][k]);
+    // The supermarket sits at the far end of a deep side passage; the first
+    // metres remain an open spur with a glass rail and a recessed dark bay.
+    const shop=group('右侧外展超市及纵深岔路',3.4,13.2,Math.PI/2);
+    wall(shop,-4.3,11.7,.18,7.2);wall(shop,4.3,7.65,.18,15.3);wall(shop,0,15.3,8.6,.18);
+    for(let s=0.9;s<7.2;s+=1.55){
+      b(shop,-3.66,1.0,s,.045,1.8,1.45,glass,true);
+      b(shop,-3.66,1.93,s,.07,.05,1.48,'#a7b6b6',false,.7);
     }
-    b(shop,-3.05,.68,1.15,1.0,1.05,.62,'#b1a68f',true);screen(shop,'收银',-3.05,1.42,1.48,.45,.3,'#215762');
-    sign(shop,'饮料 · 零食 · 日用品',0,2.32,7.98,4.8,.28,'#e7e5d9','#455354');
-    // Ticketing/entry hall is across the spine and opens toward the ring-facing passage.
-    const entry=group('安检与进站区',-7.8,20.5,Math.PI/2);
-    wall(entry,-4.1,-4.2,.18,8.4);wall(entry,4.1,-4.2,.18,8.4);wall(entry,0,-8.3,8.2,.18);
-    board(entry,'进站  1号线 / 2号线','出站 → 6–11 出口',0,0,5.5);
-    for(const x of [-.65,.65])b(entry,x,1.45,-1,.15,2.65,.38,'#d3d7d4',true);b(entry,0,2.78,-1,1.45,.22,.4,'#c3cdca');
-    b(entry,-2.9,.8,-1.3,1.0,1.35,1.45,'#8e9b9e',true);b(entry,-2.9,.63,-.1,.85,.12,.9,'#333b3c',true);screen(entry,'安检',-2.9,1.73,-1,.46,.33,'#1689ad');
-    for(const x of [-2.6,-1.3,0,1.3,2.6])gate(entry,x,-4.25);
-    sign(entry,'1  号线     2  号线',0,2.35,-8.12,4.5,.45,'#fbf9eb','#375d61');
-    sign(entry,'请先安检  再刷卡进站',0,1.85,-8.11,3.5,.3,'#e6ebe6','#354b51');
+    b(shop,-3.66,.22,4.2,.08,.28,6.8,'#527f65');
+    b(shop,3.65,1.55,4.7,.16,2.8,3.2,'#4a5657',true);
+    b(shop,3.5,1.5,4.5,.08,2.6,1.7,'#222b2c');
+    b(shop,2.3,.72,5.2,.9,1.1,1.15,'#a1aeb0',true,.5);
+    for(const x of [-3.25,3.25])b(shop,x,1.47,8.15,2.0,2.7,.06,glass,true);
+    b(shop,0,3.08,8.15,8.1,.42,.22,'#326051');
+    sign(shop,'便利超市',0,3.08,8.02,5.7,.32,'#326051','#fff0d2',Math.PI);
+    board(shop,'便利超市 →','← 返回站厅',0,1.0,3.6,Math.PI);
+    for(const xx of [-2.55,0,2.55])for(const zz of [10.1,12.7]){
+      b(shop,xx,.9,zz,.72,1.6,1.15,'#bfb9a7',true);
+      for(let row=0;row<4;row++)for(let k=0;k<4;k++)b(shop,xx-.27+k*.18,.4+row*.31,zz+.59,.12,.22,.12,['#d15d42','#ddb747','#5d9d8a','#77aaca'][k]);
+    }
+    b(shop,-3.1,.66,9.3,1.2,1.1,.7,'#b1a68f',true);screen(shop,'收银',-3.1,1.42,9.7,.55,.3,'#215762','#ffffff',Math.PI);
+    // The entry mouth faces back toward the ring, along the main passage.
+    const entry=group('面向圆环的安检与进站口',7.4,17.3);
+    wall(entry,-4.1,1.1,.18,2.2);wall(entry,-4.1,6.3,.18,2.2);
+    wall(entry,4.1,3.7,.18,7.4);wall(entry,0,7.4,8.2,.18);
+    b(entry,0,3.08,.04,7.9,.38,.18,'#b8a580');
+    sign(entry,'安检进站  1号线 / 2号线',0,3.08,-.07,7.5,.31,'#172126','#ffdc4d',Math.PI);
+    for(const x of [-1.05,1.05]){
+      for(const side of [-.48,.48])b(entry,x+side,1.43,2.0,.12,2.6,.45,'#bcc7c6',true,.55);
+      b(entry,x,2.78,2.0,1.14,.2,.45,'#b8c8c9');
+      sign(entry,'安检',x,2.78,1.75,.72,.15,'#197aa2','#fffcee',Math.PI);
+    }
+    b(entry,2.9,.8,3.2,1.0,1.35,1.45,'#8e9b9e',true);
+    b(entry,2.9,.63,4.15,.85,.12,.9,'#333b3c',true);
+    screen(entry,'行李安检',2.9,1.73,2.3,.75,.33,'#1689ad','#ffffff',Math.PI);
+    for(const x of [-2.4,-1.15,.1,1.35,2.6])gate(entry,x,5.6);
+    sign(entry,'请先安检  再刷卡进站',0,2.3,7.27,4.7,.33,'#e6ebe6','#354b51',Math.PI);
 
-    // Restroom entry faces the B-side lobby; MEN is on visitor-left, WOMEN on visitor-right.
-    const wc=group('卫生间前厅与洗手区',10,21.4,0);
-    // Restroom sits on the opposite/southern side of the 11 arms; entrance faces the B-side spur.
+    // Opposite the 11 exits, the WC opens south from the B-side passage.
+    // Its public front is layered glass, warm perforated panels and a lit cove.
+    const wc=group('11出口对侧卫生间前厅与洗手区',19,21.2);
     wall(wc,-4,0,.18,7);wall(wc,4,0,.18,7);wall(wc,0,-3.5,8,.18);
-    wall(wc,-2.9,-.25,2.2,.18);wall(wc,2.9,-.25,2.2,.18);
-    b(wc,0,3.13,3.5,7.8,.35,.18,'#e2d6bc');sign(wc,'卫生间  TOILET',0,3.13,3.62,4.6,.3,'#d9c49a','#443d32');
-    torus(wc,0,3.25,1.45,1.45,.09,'#eaf5ff');
-    // Open turning lobby, with the washbasins and mirror on the far wall.
-    for(let i=0;i<=28;i++){const a=Math.PI+i*Math.PI/28;const xx=Math.cos(a)*1.4,zz=3.35+Math.sin(a)*1.4;b(wc,xx,1.53,zz,.075,2.85,.12,i%4?'#b69b65':material('#ffe4aa',0,true),true);}
-    b(wc,0,1.55,2.08,.24,2.9,.18,'#b5beb9',true,.65);
-    for(const [x,title,col] of [[2.75,'男 MEN','#325a73'],[-2.75,'女 WOMEN','#b04972']]){
-      sign(wc,title,x,2.58,-1.88,1.7,.45,'#a79270','#ffeed0');screen(wc,'空闲\nVACANT',x,1.8,-1.86,.65,.45,'#1279be');
-      wall(wc,x,-2.7,1.8,.18);sign(wc,title,x,1.8,-2.59,1.4,.55,'#d9ccb5',col);
+    wall(wc,-3.12,3.5,1.75,.18);wall(wc,3.12,3.5,1.75,.18);
+    for(const x of [-2.25,2.25]){
+      b(wc,x,1.5,3.53,.06,2.8,.13,glass,true);
+      b(wc,x,3.03,3.53,.12,.11,.17,'#8f9c99',false,.65);
     }
-    // The source sketch puts the washbasins and mirror behind the curved screen.
-    b(wc,0,.86,-2.35,3.6,.16,.83,'#ded7c9',true);b(wc,0,.43,-2.4,3.3,.78,.62,'#9c8c72',true);
-    for(const x of [-1.15,0,1.15]){cyl(wc,x,.97,-2.24,.31,.09,'#f7f4e9');cyl(wc,x,.99,-2.24,.21,.025,'#8dabad');b(wc,x,1.13,-2.58,.055,.25,.06,'#a6bcbd',false,.8);b(wc,x,1.26,-2.48,.055,.05,.24,'#a6bcbd',false,.8);}
-    b(wc,0,1.99,-2.96,3.65,1.45,.06,'#748d98',false,.8);b(wc,0,2.74,-2.92,3.75,.065,.09,material('#fff8e2',0,true));
-    sign(wc,'洗手区',0,2.9,-2.89,1.4,.24,'#e6dfce','#645944');
-    const decal=sign(wc,'← 男    洗手间    女 →',0,.143,2.9,2.8,.65,'#bfc3bc','#497e9e');decal.rotation.x=-Math.PI/2;
-    b(wc,-3.25,.4,-1.2,.38,.55,.1,'#e1bd32',true);sign(wc,'小心地滑',-3.25,.44,-1.135,.34,.31,'#e1bd32','#353b33');
-    safety(root,-3.2,17);barriers(root,17,36);map(root,-3.2,23.4,Math.PI/2);bin(root,-14,22.8);
+    b(wc,0,3.17,3.52,7.9,.37,.24,'#e3dacb');
+    sign(wc,'卫生间  TOILET',0,3.18,3.66,4.8,.31,'#e3dacb','#54472b');
+    sign(wc,'男  MEN        女  WOMEN',0,2.61,3.61,4.1,.27,'#c1a66f','#fff8df');
+    for(const x of [-3.38,3.38])for(let row=0;row<10;row++)for(let col=0;col<4;col++){
+      const px=x+(col-1.5)*.22,py=.43+row*.22;
+      b(wc,px,py,3.62,.046,.046,.014,material('#f5d897',0,true));
+    }
+    torus(wc,0,3.27,1.5,1.48,.1,'#eaf5ff');
+    cyl(wc,0,3.39,1.5,1.78,.055,'#e4d8bd');
+    for(let i=0;i<=30;i++){
+      const a=Math.PI+i*Math.PI/30,xx=Math.cos(a)*1.43,zz=.7+Math.sin(a)*1.43;
+      b(wc,xx,1.49,zz,.072,2.8,.12,i%4?'#bd9e63':material('#ffe0a1',0,true),true);
+    }
+    b(wc,0,1.5,-.7,.21,2.8,.18,'#b5beb9',true,.65);
+    for(const [x,title,col] of [[2.75,'男 MEN','#325a73'],[-2.75,'女 WOMEN','#b04972']]){
+      sign(wc,title,x,2.58,-1.58,1.7,.45,'#a79270','#ffeed0');
+      screen(wc,'空闲\nVACANT',x,1.8,-1.56,.65,.45,'#1279be');
+      wall(wc,x,-2.05,1.8,.18);sign(wc,title,x,1.8,-1.94,1.4,.55,'#d9ccb5',col);
+    }
+    // The unphotographed rear of both rooms is screened; only the public sinks are modeled.
+    b(wc,0,.86,-2.36,3.6,.16,.83,'#ded7c9',true);b(wc,0,.43,-2.42,3.3,.78,.62,'#9c8c72',true);
+    for(const x of [-1.15,0,1.15]){
+      cyl(wc,x,.97,-2.25,.31,.09,'#f7f4e9');cyl(wc,x,.99,-2.25,.21,.025,'#8dabad');
+      b(wc,x,1.13,-2.58,.055,.25,.06,'#a6bcbd',false,.8);
+    }
+    b(wc,0,1.99,-3.39,3.65,1.45,.06,'#748d98',false,.8);
+    b(wc,0,2.74,-3.36,3.75,.065,.09,material('#fff8e2',0,true));
+    sign(wc,'洗手区',0,2.9,-3.34,1.4,.24,'#e6dfce','#645944');
+    const decal=sign(wc,'← 男    洗手间    女 →',0,.143,2.95,2.8,.65,'#bfc3bc','#497e9e');decal.rotation.x=-Math.PI/2;
+    b(wc,-3.25,.4,1.2,.38,.55,.1,'#e1bd32',true);sign(wc,'小心地滑',-3.25,.44,1.265,.34,.31,'#e1bd32','#353b33');
+    safety(root,-3.2,17);barriers(root,12.3,27.3);map(root,-3.2,23.4,Math.PI/2);bin(root,3,24.5);
 
     // Inner ring: photographed flared crowns and red/orange cylindrical LED wraps.
     for(const [x,z,i] of pierSpecs){
